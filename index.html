@@ -152,6 +152,10 @@ tr.rg{background:rgba(45,122,79,.1);}tr.ry{background:rgba(168,120,32,.13);}tr.r
 .toast{position:fixed;bottom:20px;right:20px;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);color:var(--text);font-size:12px;padding:12px 16px;border-radius:var(--r);z-index:999;animation:ti .25s ease;max-width:300px;}
 @keyframes ti{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .toast.ok{border-left-color:var(--green-l);}.toast.err{border-left-color:var(--red-l);}
+.offline-bar{position:fixed;top:52px;left:0;right:0;background:#8a2020;color:#fff;font-size:11px;padding:6px 20px;z-index:99;display:none;align-items:center;justify-content:space-between;gap:10px;}
+.offline-bar.visible{display:flex;}
+.pending-badge{background:var(--red-l);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:6px;display:none;}
+.pending-badge.visible{display:inline;}
 .fb{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
 .fb .fi{width:auto;flex:1;min-width:140px;}
 ::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:var(--bg);}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
@@ -294,6 +298,26 @@ tr.rg{background:rgba(45,122,79,.1);}tr.ry{background:rgba(168,120,32,.13);}tr.r
   </div>
 </div>
 
+<!-- EDITAR PATENTE MODAL -->
+<div class="overlay" id="editModal">
+  <div class="modal" style="width:420px">
+    <div class="modal-title"><div class="micon">✏️</div>Corregir Registro</div>
+    <input type="hidden" id="edit_idx"/>
+    <div class="fg">
+      <label class="fl">Patente actual</label>
+      <div class="fi" id="edit_pat_actual" style="opacity:.5;cursor:default"></div>
+    </div>
+    <div class="fg">
+      <label class="fl">Patente correcta <span class="req">*</span></label>
+      <input class="fi" id="edit_pat_nueva" placeholder="AB.CD.12" maxlength="8" oninput="fmtPatente(this)"/>
+    </div>
+    <div class="fa">
+      <button class="btn btn-g" onclick="closeModal('editModal')">Cancelar</button>
+      <button class="btn btn-p" onclick="guardarEdicion()">✓ Corregir</button>
+    </div>
+  </div>
+</div>
+
 <!-- MOVIMIENTO MODAL -->
 <div class="overlay" id="movModal">
   <div class="modal" style="width:380px">
@@ -321,6 +345,7 @@ tr.rg{background:rgba(45,122,79,.1);}tr.ry{background:rgba(168,120,32,.13);}tr.r
   <div class="logo"><div class="dot"></div>METALUM PORTERÍA</div>
   <div class="header-r">
     <div class="sync-dot" id="syncDot"></div>
+    <span class="pending-badge" id="pendingBadge" title="Registros pendientes de subir"></span>
     <span id="clock"></span>
     <span class="plant-badge" id="plantBadge" onclick="document.getElementById('plantModal').classList.add('open')">— Planta —</span>
   </div>
@@ -345,6 +370,7 @@ tr.rg{background:rgba(45,122,79,.1);}tr.ry{background:rgba(168,120,32,.13);}tr.r
     <div style="display:flex;gap:8px;margin-bottom:16px">
       <button class="btn btn-p" onclick="openModal('regModal')">+ Registro</button>
       <button class="btn btn-g" onclick="openMovModal()">⇄ Movimiento</button>
+      <button class="btn btn-g btn-sm" onclick="cerrarHuerfanos()" title="Cerrar registros de días anteriores aún abiertos">🔧 Huérfanos</button>
       <button class="btn btn-g btn-sm" onclick="fetchDatos()" style="margin-left:auto">↻ Actualizar</button>
     </div>
     <div class="dp">
@@ -426,6 +452,7 @@ function pinKey(k){
 
 // ─── PLANT ───────────────────────────────────────────────────
 function selectPlant(name){
+  updatePendingBadge();
   currentPlant=name;
   document.getElementById('plantBadge').textContent=name.toUpperCase();
   document.body.className=name==='Renca'?'renca':'pintana';
@@ -627,24 +654,140 @@ function updatePersonas(){
   document.getElementById('acomp2_section').classList.toggle('visible',n>=3);
 }
 
+// ─── OFFLINE QUEUE ───────────────────────────────────────────
+const QUEUE_KEY = 'metalum_queue';
+
+function getQueue(){ try{ return JSON.parse(localStorage.getItem(QUEUE_KEY)||'[]'); }catch(e){ return []; } }
+function saveQueue(q){ localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); }
+
+function encolar(action, data){
+  const q = getQueue();
+  q.push({ id: Date.now(), action, data, ts: new Date().toISOString() });
+  saveQueue(q);
+  updatePendingBadge();
+}
+
+function updatePendingBadge(){
+  const q = getQueue();
+  const badge = document.getElementById('pendingBadge');
+  if(q.length > 0){
+    badge.textContent = q.length + ' pendiente' + (q.length>1?'s':'');
+    badge.classList.add('visible');
+  } else {
+    badge.classList.remove('visible');
+  }
+}
+
+async function reintentarCola(){
+  const q = getQueue();
+  if(!q.length) return;
+  const fallidos = [];
+  for(const item of q){
+    try{
+      const res = await fetch(SCRIPT_URL,{
+        method:'POST', redirect:'follow',
+        headers:{'Content-Type':'text/plain'},
+        body: JSON.stringify({action: item.action, data: item.data})
+      });
+      const r = await res.json();
+      if(!r.ok) fallidos.push(item);
+    } catch(e){ fallidos.push(item); }
+  }
+  saveQueue(fallidos);
+  updatePendingBadge();
+  if(fallidos.length === 0){
+    toast('✅ Todos los registros subidos','ok');
+    fetchDatos();
+  } else {
+    toast(`${fallidos.length} registro(s) aún pendientes`,'err');
+  }
+}
+
 // ─── API ─────────────────────────────────────────────────────
-async function api(action,data={}){
-  const res=await fetch(SCRIPT_URL,{
-    method:'POST',
-    redirect:'follow',
+let isOnline = true;
+
+async function api(action, data={}){
+  const res = await fetch(SCRIPT_URL,{
+    method:'POST', redirect:'follow',
     headers:{'Content-Type':'text/plain'},
-    body:JSON.stringify({action,data})
+    body: JSON.stringify({action, data})
   });
   return res.json();
 }
+
+async function apiConCola(action, data={}){
+  try{
+    const r = await api(action, data);
+    if(r.ok){
+      setOnline(true);
+      return r;
+    } else {
+      throw new Error(r.error);
+    }
+  } catch(e){
+    // Si es registro o movimiento, encolar para después
+    if(action === 'registrarProveedor' || action === 'registrarMovimiento'){
+      encolar(action, data);
+      setOnline(false);
+      // Igual actualizar cache local para que el monitor se vea bien
+      actualizarCacheLocal(action, data);
+      return { ok: true, offline: true };
+    }
+    setOnline(false);
+    throw e;
+  }
+}
+
+function actualizarCacheLocal(action, data){
+  const fecha = formatFechaLocal();
+  if(action === 'registrarProveedor'){
+    cache.registros.push({
+      fecha, proveedor: data.proveedor, patente: data.patente,
+      material: data.material, personas: data.personas,
+      empresa: data.empresa, beeper: data.beeper,
+      rut_chofer: data.rut_chofer, foto_chofer:'', foto_acomp1:'', foto_acomp2:''
+    });
+  } else if(action === 'registrarMovimiento'){
+    cache.movimientos.push({ fecha, patente: data.patente, tipo: data.tipo });
+  }
+  renderAll();
+}
+
+function formatFechaLocal(){
+  const d = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  let h = d.getHours(); const ampm = h>=12?'PM':'AM'; h=h%12||12;
+  return `${pad(d.getDate())}-${pad(d.getMonth()+1)}-${d.getFullYear()} ${pad(h)}:${pad(d.getMinutes())} ${ampm}`;
+}
+
+function setOnline(online){
+  isOnline = online;
+  document.getElementById('offlineBar').classList.toggle('visible', !online);
+  setSyncOk(online);
+}
+
 async function fetchDatos(){
   try{
-    const r=await api('getDatos',{planta:currentPlant});
-    if(r.ok){cache=r;setSyncOk(true);renderAll();}else setSyncOk(false);
-  }catch(e){setSyncOk(false);}
+    const r = await api('getDatos',{planta:currentPlant});
+    if(r.ok){ cache=r; setOnline(true); renderAll(); }
+    else setOnline(false);
+  }catch(e){ setOnline(false); }
 }
-function setSyncOk(ok){document.getElementById('syncDot').className='sync-dot '+(ok?'ok':'err');}
-function startRefresh(){fetchDatos();if(refreshInterval)clearInterval(refreshInterval);refreshInterval=setInterval(fetchDatos,20000);}
+
+function setSyncOk(ok){ document.getElementById('syncDot').className='sync-dot '+(ok?'ok':'err'); }
+
+function startRefresh(){
+  fetchDatos();
+  if(refreshInterval) clearInterval(refreshInterval);
+  refreshInterval = setInterval(()=>{
+    fetchDatos();
+    reintentarCola(); // reintentar cola cada ciclo
+  }, 20000);
+}
+
+// Detectar cambios de conectividad del navegador
+window.addEventListener('online', ()=>{ setOnline(true); reintentarCola(); fetchDatos(); });
+window.addEventListener('offline', ()=>{ setOnline(false); });
 
 // ─── FECHA ───────────────────────────────────────────────────
 function parseFecha(str){
@@ -707,12 +850,12 @@ function renderMonitor(){
   const tbE=document.getElementById('tb-esp');
   tbE.innerHTML=enEspera.length?enEspera.sort((a,b)=>parseFecha(a.fecha)-parseFecha(b.fecha)).map(r=>{
     const el=now-parseFecha(r.fecha);
-    return`<tr class="${waitClass(el)}"><td>${formatHora(r.fecha)}</td><td>${r.proveedor}</td><td style="font-weight:600">${r.patente}</td><td style="text-align:center"><b>${r.beeper||'—'}</b></td><td>${empresaBadge(r.empresa)}</td><td><span class="badge ${waitBadge(el)}">${formatElapsed(el)}</span></td><td><button class="btn btn-green btn-sm" onclick="quickEntrada('${r.patente}')">Hacer pasar</button></td></tr>`;
+    return`<tr class="${waitClass(el)}"><td>${formatHora(r.fecha)}</td><td>${r.proveedor}</td><td style="font-weight:600">${r.patente}</td><td style="text-align:center"><b>${r.beeper||'—'}</b></td><td>${empresaBadge(r.empresa)}</td><td><span class="badge ${waitBadge(el)}">${formatElapsed(el)}</span></td><td style="display:flex;gap:4px"><button class="btn btn-green btn-sm" onclick="quickEntrada('${r.patente}')">Hacer pasar</button><button class="btn btn-g btn-sm" onclick="abrirEdicion('${r.patente}','${r.fecha}')" title="Corregir patente">✏️</button></td></tr>`;
   }).join(''):'<tr><td colspan="7" class="empty">Sin camiones en espera</td></tr>';
   const tbP=document.getElementById('tb-pla');
   tbP.innerHTML=enPlanta.length?enPlanta.map(r=>{
     const en=getEntradaMov(r);
-    return`<tr><td>${en?formatHora(en.fecha):'—'}</td><td>${r.proveedor}</td><td style="font-weight:600">${r.patente}</td><td style="color:var(--text2)">${r.material}</td><td>${empresaBadge(r.empresa)}</td><td><button class="btn btn-red btn-sm" onclick="quickSalida('${r.patente}')">Salida</button></td></tr>`;
+    return`<tr><td>${en?formatHora(en.fecha):'—'}</td><td>${r.proveedor}</td><td style="font-weight:600">${r.patente}</td><td style="color:var(--text2)">${r.material}</td><td>${empresaBadge(r.empresa)}</td><td style="display:flex;gap:4px"><button class="btn btn-red btn-sm" onclick="quickSalida('${r.patente}')">Salida</button><button class="btn btn-g btn-sm" onclick="abrirEdicion('${r.patente}','${r.fecha}')" title="Corregir patente">✏️</button></td></tr>`;
   }).join(''):'<tr><td colspan="6" class="empty">Sin camiones en planta</td></tr>';
 }
 
@@ -773,7 +916,7 @@ async function guardarRegistro(){
   const btn=document.getElementById('btnReg');
   btn.disabled=true;btn.textContent='Subiendo fotos...';
 
-  const result=await api('registrarProveedor',{
+  const result=await apiConCola('registrarProveedor',{
     planta:currentPlant,proveedor:prov,patente:pat,material:mat,
     personas:per,empresa:getEmpresaFinal(),beeper,
     rut_chofer:rut,foto_chofer:fotoData[0],
@@ -807,13 +950,63 @@ async function guardarMovimiento(){
   if(!pat){toast('Ingresa la patente','err');return;}
   const btn=document.getElementById('btnMov');
   btn.disabled=true;btn.textContent='Guardando...';
-  const r=await api('registrarMovimiento',{planta:currentPlant,patente:pat,tipo});
+  const r=await apiConCola('registrarMovimiento',{planta:currentPlant,patente:pat,tipo});
   btn.disabled=false;btn.textContent='✓ Confirmar';
   if(r.ok){closeModal('movModal');toast(`${tipo} — ${pat}`,'ok');fetchDatos();}
   else toast('Error: '+r.error,'err');
 }
-async function quickEntrada(p){const r=await api('registrarMovimiento',{planta:currentPlant,patente:p,tipo:'ENTRADA'});if(r.ok){toast(`ENTRADA — ${p}`,'ok');fetchDatos();}else toast('Error: '+r.error,'err');}
-async function quickSalida(p){const r=await api('registrarMovimiento',{planta:currentPlant,patente:p,tipo:'SALIDA'});if(r.ok){toast(`SALIDA — ${p}`,'ok');fetchDatos();}else toast('Error: '+r.error,'err');}
+async function quickEntrada(p){const r=await apiConCola('registrarMovimiento',{planta:currentPlant,patente:p,tipo:'ENTRADA'});if(r.ok){toast(`ENTRADA — ${p}`,'ok');fetchDatos();}else toast('Error: '+r.error,'err');}
+async function quickSalida(p){const r=await apiConCola('registrarMovimiento',{planta:currentPlant,patente:p,tipo:'SALIDA'});if(r.ok){toast(`SALIDA — ${p}`,'ok');fetchDatos();}else toast('Error: '+r.error,'err');}
+
+// ─── EDITAR PATENTE ──────────────────────────────────────────
+function abrirEdicion(patente, fecha){
+  document.getElementById('edit_pat_actual').textContent = patente;
+  document.getElementById('edit_pat_nueva').value = patente;
+  document.getElementById('edit_idx').value = fecha; // usamos fecha como clave única
+  openModal('editModal');
+}
+
+async function guardarEdicion(){
+  const patAntigua = document.getElementById('edit_pat_actual').textContent;
+  const patNueva = document.getElementById('edit_pat_nueva').value.trim();
+  const fecha = document.getElementById('edit_idx').value;
+  if(!patNueva){ toast('Ingresa la patente correcta','err'); return; }
+  if(patNueva === patAntigua){ closeModal('editModal'); return; }
+
+  const r = await apiConCola('editarPatente',{
+    planta: currentPlant,
+    patente_antigua: patAntigua,
+    patente_nueva: patNueva,
+    fecha // para identificar el registro exacto
+  });
+
+  if(r.ok || r.offline){
+    // Actualizar cache local
+    cache.registros.forEach(reg => {
+      if(reg.patente === patAntigua && reg.fecha === fecha) reg.patente = patNueva;
+    });
+    closeModal('editModal');
+    toast(`Patente corregida: ${patAntigua} → ${patNueva}`,'ok');
+    renderAll();
+    if(!r.offline) fetchDatos();
+  } else toast('Error: '+r.error,'err');
+}
+
+// ─── CERRAR HUÉRFANOS ────────────────────────────────────────
+function cerrarHuerfanos(){
+  // Registros de días anteriores que siguen "En Planta"
+  const hoy = new Date();
+  const huerfanos = cache.registros.filter(r => {
+    const d = parseFecha(r.fecha);
+    if(!d) return false;
+    const esDeHoy = d.getDate()===hoy.getDate()&&d.getMonth()===hoy.getMonth()&&d.getFullYear()===hoy.getFullYear();
+    return !esDeHoy && getEstado(r)==='PLANTA';
+  });
+  if(!huerfanos.length){ toast('No hay registros huérfanos','ok'); return; }
+  if(!confirm(`Hay ${huerfanos.length} registro(s) de días anteriores aún "En Planta". ¿Registrar su salida ahora?`)) return;
+  huerfanos.forEach(r => quickSalida(r.patente));
+  toast(`${huerfanos.length} salida(s) registradas`,'ok');
+}
 
 function exportCSV(){
   const rows=[['Fecha','Proveedor','Patente','Material','Empresa','Beeper','Personas','Entrada','Salida','T.Planta','Estado','Foto Chofer','Foto Acomp1','Foto Acomp2']];
@@ -847,6 +1040,23 @@ setInterval(()=>{
 },1000);
 
 initMateriales();
+
+// ─── MODO MONITOR (solo lectura para supervisores) ───────────
+const urlParams = new URLSearchParams(window.location.search);
+const monitorMode = urlParams.get('monitor');
+const monitorPlanta = urlParams.get('planta');
+if(monitorMode && monitorPlanta){
+  // Ocultar nav items excepto monitor
+  document.getElementById('nav-registro').style.display='none';
+  document.getElementById('nav-historial').style.display='none';
+  // Ocultar botones de acción
+  document.querySelectorAll('.btn-p, .btn-green, .btn-red').forEach(b=>{
+    if(!b.closest('.pin-modal')) b.style.display='none';
+  });
+  // Entrar directo sin PIN
+  selectPlant(monitorPlanta==='renca'?'Renca':'La Pintana');
+  document.getElementById('plantModal').classList.remove('open');
+}
 </script>
 </body>
 </html>
