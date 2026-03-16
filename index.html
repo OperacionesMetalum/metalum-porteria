@@ -940,8 +940,8 @@ async function guardarRegistro(){
 
   btn.disabled=false;btn.textContent='✓ Registrar';
   if(result.ok){
-    resetForm();
     closeModal('regModal');
+    resetForm();
     toast(`${prov} registrado ✓`,'ok');
     fetchDatos();
   } else toast('Error: '+result.error,'err');
