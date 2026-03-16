@@ -87,15 +87,13 @@ main{flex:1;padding:20px;max-width:1400px;width:100%;margin:0 auto;}
 .foto-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
 .foto-box.error-box{border-color:var(--red-l);}
 .foto-inner{padding:12px;display:flex;flex-direction:column;gap:8px;}
-.foto-preview{width:100%;max-height:150px;object-fit:cover;border-radius:4px;display:none;}
+.foto-preview{width:100%;max-height:180px;object-fit:cover;border-radius:4px;display:none;cursor:pointer;}
 .foto-preview.visible{display:block;}
-.foto-actions{display:flex;gap:8px;}
-.foto-status{font-size:11px;color:var(--text2);display:flex;align-items:center;gap:6px;}
+.foto-status{font-size:11px;color:var(--text2);}
 .foto-status.ok{color:var(--green-l);}
-/* cámara */
-.cam-wrap{position:relative;width:100%;}
-video{width:100%;border-radius:4px;max-height:160px;object-fit:cover;background:#000;display:block;}
-.cam-overlay{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);}
+.foto-input-label{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px dashed var(--border);border-radius:var(--r);padding:14px;cursor:pointer;transition:all .15s;width:100%;}
+.foto-input-label:hover{border-color:var(--accent);color:var(--accent);}
+.foto-input-label span{font-size:12px;}
 
 /* ACOMPAÑANTE */
 .acomp-section{display:none;}.acomp-section.visible{display:block;}
@@ -400,7 +398,6 @@ const MAT_METALUM = ['UBC','Perfil','Tense','Blando','Radiador','Chatarra'];
 let currentPlant='', cache={registros:[],movimientos:[]}, refreshInterval=null;
 let materialesSeleccionados=[];
 let fotoData={0:null,1:null,2:null};
-let streams={0:null,1:null,2:null};
 let pinTarget='', pinCurrent='';
 
 // ─── PIN ─────────────────────────────────────────────────────
@@ -438,65 +435,58 @@ function buildFotoBox(idx){
   div.innerHTML=`
     <div class="foto-box" id="fb_${idx}">
       <div class="foto-inner">
-        <div class="cam-wrap" id="cam_wrap_${idx}">
-          <video id="video_${idx}" autoplay playsinline></video>
-          <div class="cam-overlay">
-            <button class="btn btn-p btn-sm" onclick="capturar(${idx})">📸 Capturar foto</button>
-          </div>
-        </div>
-        <img class="foto-preview" id="preview_${idx}" onclick="retomarFoto(${idx})"/>
-        <div class="foto-status" id="foto_status_${idx}">Sin foto — abre la cámara</div>
-        <div class="foto-actions">
-          <button class="btn btn-g btn-sm" id="btn_cam_${idx}" onclick="abrirCamara(${idx})">📷 Abrir cámara</button>
-        </div>
+        <img class="foto-preview" id="preview_${idx}" onclick="retomarFoto(${idx})" title="Toca para cambiar foto"/>
+        <label class="foto-input-label" id="foto_label_${idx}">
+          <span style="font-size:20px">📷</span>
+          <span>Tomar foto del carnet</span>
+          <input type="file" accept="image/*" capture="environment" style="display:none"
+            onchange="procesarFoto(event,${idx})" id="foto_input_${idx}"/>
+        </label>
+        <div class="foto-status" id="foto_status_${idx}">Sin foto</div>
       </div>
     </div>
     <canvas id="canvas_${idx}" style="display:none"></canvas>`;
 }
 
-async function abrirCamara(idx){
-  const wrap=document.getElementById('cam_wrap_'+idx);
-  wrap.style.display='block';
-  try{
-    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}});
-    streams[idx]=stream;
-    document.getElementById('video_'+idx).srcObject=stream;
-    document.getElementById('btn_cam_'+idx).style.display='none';
-  }catch(e){toast('No se pudo acceder a la cámara. Asegúrate de estar en HTTPS.','err');}
-}
-
-function capturar(idx){
-  const video=document.getElementById('video_'+idx);
-  const canvas=document.getElementById('canvas_'+idx);
-  // Comprimir: máx 800px ancho, JPEG 70%
-  const maxW=800;
-  const scale=Math.min(1,maxW/video.videoWidth);
-  canvas.width=Math.round(video.videoWidth*scale);
-  canvas.height=Math.round(video.videoHeight*scale);
-  canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);
-  const dataUrl=canvas.toDataURL('image/jpeg',0.70);
-  fotoData[idx]=dataUrl.split(',')[1]; // solo base64, sin prefijo
-  // Mostrar preview
-  const preview=document.getElementById('preview_'+idx);
-  preview.src=dataUrl;
-  preview.classList.add('visible');
-  // Detener cámara
-  if(streams[idx]){streams[idx].getTracks().forEach(t=>t.stop());streams[idx]=null;}
-  document.getElementById('cam_wrap_'+idx).style.display='none';
-  const kb=Math.round(fotoData[idx].length*0.75/1024);
-  document.getElementById('foto_status_'+idx).className='foto-status ok';
-  document.getElementById('foto_status_'+idx).textContent=`✅ Foto capturada (~${kb}KB) — toca la imagen para reemplazar`;
-  document.getElementById('btn_cam_'+idx).style.display='none';
-  document.getElementById('fb_'+idx).classList.remove('error-box');
+function procesarFoto(event, idx){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const img = new Image();
+    img.onload = function(){
+      // Comprimir: máx 800px ancho, JPEG 70%
+      const maxW = 800;
+      const scale = Math.min(1, maxW / img.width);
+      const canvas = document.getElementById('canvas_'+idx);
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.70);
+      fotoData[idx] = dataUrl.split(',')[1];
+      // Preview
+      const preview = document.getElementById('preview_'+idx);
+      preview.src = dataUrl;
+      preview.classList.add('visible');
+      document.getElementById('foto_label_'+idx).style.display = 'none';
+      const kb = Math.round(fotoData[idx].length * 0.75 / 1024);
+      document.getElementById('foto_status_'+idx).className = 'foto-status ok';
+      document.getElementById('foto_status_'+idx).textContent = `✅ Foto lista (~${kb}KB) — toca la imagen para cambiar`;
+      document.getElementById('fb_'+idx).classList.remove('error-box');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
 }
 
 function retomarFoto(idx){
-  fotoData[idx]=null;
+  fotoData[idx] = null;
   document.getElementById('preview_'+idx).classList.remove('visible');
-  document.getElementById('foto_status_'+idx).className='foto-status';
-  document.getElementById('foto_status_'+idx).textContent='Sin foto';
-  document.getElementById('btn_cam_'+idx).style.display='';
-  document.getElementById('cam_wrap_'+idx).style.display='none';
+  document.getElementById('foto_label_'+idx).style.display = '';
+  document.getElementById('foto_status_'+idx).className = 'foto-status';
+  document.getElementById('foto_status_'+idx).textContent = 'Sin foto';
+  document.getElementById('foto_input_'+idx).value = '';
+  document.getElementById('fb_'+idx).classList.remove('error-box');
 }
 
 // ─── MATERIALES ──────────────────────────────────────────────
@@ -572,7 +562,12 @@ function updatePersonas(){
 
 // ─── API ─────────────────────────────────────────────────────
 async function api(action,data={}){
-  const res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action,data})});
+  const res=await fetch(SCRIPT_URL,{
+    method:'POST',
+    redirect:'follow',
+    headers:{'Content-Type':'text/plain'},
+    body:JSON.stringify({action,data})
+  });
   return res.json();
 }
 async function fetchDatos(){
@@ -736,7 +731,6 @@ function resetForm(){
   document.getElementById('empresa-auto').className='empresa-auto empty';
   document.getElementById('empresa-auto').textContent='Selecciona materiales para ver destino';
   fotoData={0:null,1:null,2:null};
-  Object.keys(streams).forEach(i=>{if(streams[i]){streams[i].getTracks().forEach(t=>t.stop());streams[i]=null;}});
   [0,1,2].forEach(i=>buildFotoBox(i));
 }
 
@@ -774,7 +768,6 @@ function openModal(id){
 }
 function closeModal(id){
   document.getElementById(id).classList.remove('open');
-  Object.keys(streams).forEach(i=>{if(streams[i]){streams[i].getTracks().forEach(t=>t.stop());streams[i]=null;}});
 }
 function openMovModal(pat='',tipo='ENTRADA'){document.getElementById('m_pat').value=pat;document.getElementById('m_tipo').value=tipo;openModal('movModal');}
 function showView(name){document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));document.getElementById('view-'+name).classList.add('active');document.getElementById('nav-'+name).classList.add('active');}
