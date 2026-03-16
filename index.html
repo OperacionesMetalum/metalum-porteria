@@ -938,11 +938,11 @@ async function guardarRegistro(){
   });
 
   btn.disabled=false; btn.textContent='✓ Registrar';
-  console.log('Resultado registro:', JSON.stringify(result));
   if(result && result.ok){
-    closeModal('regModal');
-    resetForm();
-    toast(`${prov} registrado ✓`,'ok');
+    toast(`${prov} registrado ✓`,'ok', ()=>{
+      closeModal('regModal');
+      resetForm();
+    });
     fetchDatos();
   } else {
     toast(`Error: ${result ? result.error : 'sin respuesta'}`,'err');
@@ -1080,7 +1080,14 @@ function closeModal(id){
 function openMovModal(pat='',tipo='ENTRADA'){document.getElementById('m_pat').value=pat;document.getElementById('m_tipo').value=tipo;openModal('movModal');}
 function showView(name){document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));document.getElementById('view-'+name).classList.add('active');document.getElementById('nav-'+name).classList.add('active');}
 function clearFilters(){document.getElementById('f-fecha').value='';document.getElementById('f-text').value='';renderHistorial();}
-function toast(msg,type=''){const t=document.createElement('div');t.className='toast '+type;t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3500);}
+function toast(msg,type='',onShow=null){
+  const t=document.createElement('div');
+  t.className='toast '+type;
+  t.textContent=msg;
+  document.body.appendChild(t);
+  if(onShow) onShow();
+  setTimeout(()=>t.remove(),3500);
+}
 
 setInterval(()=>{
   document.getElementById('clock').textContent=new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
