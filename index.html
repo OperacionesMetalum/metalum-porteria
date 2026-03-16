@@ -915,12 +915,11 @@ async function guardarRegistro(){
   }
   if(!ok){toast('Completa todos los campos obligatorios','err');return;}
 
-  // Cerrar modal inmediatamente
-  closeModal('regModal');
-  resetForm();
-  toast(`Registrando ${prov}... espera un momento`);
-
   const fotosSnapshot = {0:fotoData[0], 1:fotoData[1], 2:fotoData[2]};
+  const btn=document.getElementById('btnReg');
+  btn.disabled=true;
+  const nFotos=[fotosSnapshot[0],fotosSnapshot[1],fotosSnapshot[2]].filter(Boolean).length;
+  btn.textContent = nFotos>0 ? `Subiendo foto${nFotos>1?'s':''}...` : 'Guardando...';
 
 
 
@@ -937,7 +936,10 @@ async function guardarRegistro(){
     foto_acomp2:fotosSnapshot[2]||null,
   });
 
+  btn.disabled=false; btn.textContent='✓ Registrar';
   if(result.ok){
+    closeModal('regModal');
+    resetForm();
     toast(`${prov} registrado ✓`,'ok');
     fetchDatos();
   } else {
