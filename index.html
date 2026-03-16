@@ -84,6 +84,9 @@ main{flex:1;padding:20px;max-width:1400px;width:100%;margin:0 auto;}
 .empresa-auto.empty{color:var(--text3);font-size:11px;}
 
 /* FOTO CARNET */
+.cam-wrap{position:relative;width:100%;}
+video{width:100%;border-radius:4px;max-height:160px;object-fit:cover;background:#000;display:block;}
+.cam-overlay{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);}
 .foto-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
 .foto-box.error-box{border-color:var(--red-l);}
 .foto-inner{padding:12px;display:flex;flex-direction:column;gap:8px;}
@@ -430,22 +433,78 @@ function selectPlant(name){
 }
 
 // ─── FOTO BOX ────────────────────────────────────────────────
+const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+let streams = {0:null,1:null,2:null};
+
 function buildFotoBox(idx){
   const div=document.getElementById('fotobox_'+idx);
-  div.innerHTML=`
-    <div class="foto-box" id="fb_${idx}">
-      <div class="foto-inner">
-        <img class="foto-preview" id="preview_${idx}" onclick="retomarFoto(${idx})" title="Toca para cambiar foto"/>
-        <label class="foto-input-label" id="foto_label_${idx}">
-          <span style="font-size:20px">📷</span>
-          <span>Tomar foto del carnet</span>
-          <input type="file" accept="image/*" capture="environment" style="display:none"
-            onchange="procesarFoto(event,${idx})" id="foto_input_${idx}"/>
-        </label>
-        <div class="foto-status" id="foto_status_${idx}">Sin foto</div>
+  if(isMobile){
+    div.innerHTML=`
+      <div class="foto-box" id="fb_${idx}">
+        <div class="foto-inner">
+          <img class="foto-preview" id="preview_${idx}" onclick="retomarFoto(${idx})" title="Toca para cambiar"/>
+          <label class="foto-input-label" id="foto_label_${idx}">
+            <span style="font-size:20px">📷</span>
+            <span>Tomar foto del carnet</span>
+            <input type="file" accept="image/*" capture="environment" style="display:none"
+              onchange="procesarFoto(event,${idx})" id="foto_input_${idx}"/>
+          </label>
+          <div class="foto-status" id="foto_status_${idx}">Sin foto</div>
+        </div>
       </div>
-    </div>
-    <canvas id="canvas_${idx}" style="display:none"></canvas>`;
+      <canvas id="canvas_${idx}" style="display:none"></canvas>`;
+  } else {
+    div.innerHTML=`
+      <div class="foto-box" id="fb_${idx}">
+        <div class="foto-inner">
+          <img class="foto-preview" id="preview_${idx}" onclick="retomarFoto(${idx})" title="Click para cambiar"/>
+          <div class="cam-wrap" id="cam_wrap_${idx}" style="display:none">
+            <video id="video_${idx}" autoplay playsinline></video>
+            <div class="cam-overlay">
+              <button class="btn btn-p btn-sm" onclick="capturarPC(${idx})">📸 Capturar</button>
+            </div>
+          </div>
+          <label class="foto-input-label" id="foto_label_${idx}" style="display:none">
+            <span style="font-size:20px">📁</span>
+            <span>Seleccionar archivo</span>
+            <input type="file" accept="image/*" style="display:none"
+              onchange="procesarFoto(event,${idx})" id="foto_input_${idx}"/>
+          </label>
+          <div class="foto-status" id="foto_status_${idx}">Sin foto</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-p btn-sm" id="btn_cam_${idx}" onclick="abrirCamaraPC(${idx})">📷 Abrir cámara</button>
+            <button class="btn btn-g btn-sm" onclick="document.getElementById('foto_label_${idx}').style.display='';document.getElementById('foto_label_${idx}').querySelector('input').click()">📁 Archivo</button>
+          </div>
+        </div>
+      </div>
+      <canvas id="canvas_${idx}" style="display:none"></canvas>`;
+  }
+}
+
+async function abrirCamaraPC(idx){
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720}}});
+    streams[idx] = stream;
+    const wrap = document.getElementById('cam_wrap_'+idx);
+    wrap.style.display = 'block';
+    document.getElementById('video_'+idx).srcObject = stream;
+    document.getElementById('btn_cam_'+idx).style.display = 'none';
+  }catch(e){ toast('No se pudo acceder a la cámara','err'); }
+}
+
+function capturarPC(idx){
+  const video = document.getElementById('video_'+idx);
+  const canvas = document.getElementById('canvas_'+idx);
+  const maxW = 800;
+  const scale = Math.min(1, maxW/video.videoWidth);
+  canvas.width = Math.round(video.videoWidth*scale);
+  canvas.height = Math.round(video.videoHeight*scale);
+  canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);
+  const dataUrl = canvas.toDataURL('image/jpeg',0.70);
+  fotoData[idx] = dataUrl.split(',')[1];
+  if(streams[idx]){streams[idx].getTracks().forEach(t=>t.stop());streams[idx]=null;}
+  document.getElementById('cam_wrap_'+idx).style.display='none';
+  mostrarPreview(idx, dataUrl);
 }
 
 function procesarFoto(event, idx){
@@ -455,38 +514,46 @@ function procesarFoto(event, idx){
   reader.onload = function(e){
     const img = new Image();
     img.onload = function(){
-      // Comprimir: máx 800px ancho, JPEG 70%
       const maxW = 800;
-      const scale = Math.min(1, maxW / img.width);
+      const scale = Math.min(1, maxW/img.width);
       const canvas = document.getElementById('canvas_'+idx);
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.70);
+      canvas.width = Math.round(img.width*scale);
+      canvas.height = Math.round(img.height*scale);
+      canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg',0.70);
       fotoData[idx] = dataUrl.split(',')[1];
-      // Preview
-      const preview = document.getElementById('preview_'+idx);
-      preview.src = dataUrl;
-      preview.classList.add('visible');
-      document.getElementById('foto_label_'+idx).style.display = 'none';
-      const kb = Math.round(fotoData[idx].length * 0.75 / 1024);
-      document.getElementById('foto_status_'+idx).className = 'foto-status ok';
-      document.getElementById('foto_status_'+idx).textContent = `✅ Foto lista (~${kb}KB) — toca la imagen para cambiar`;
-      document.getElementById('fb_'+idx).classList.remove('error-box');
+      mostrarPreview(idx, dataUrl);
     };
     img.src = e.target.result;
   };
   reader.readAsDataURL(file);
 }
 
-function retomarFoto(idx){
-  fotoData[idx] = null;
-  document.getElementById('preview_'+idx).classList.remove('visible');
-  document.getElementById('foto_label_'+idx).style.display = '';
-  document.getElementById('foto_status_'+idx).className = 'foto-status';
-  document.getElementById('foto_status_'+idx).textContent = 'Sin foto';
-  document.getElementById('foto_input_'+idx).value = '';
+function mostrarPreview(idx, dataUrl){
+  const preview = document.getElementById('preview_'+idx);
+  preview.src = dataUrl;
+  preview.classList.add('visible');
+  const label = document.getElementById('foto_label_'+idx);
+  if(label) label.style.display='none';
+  const btnCam = document.getElementById('btn_cam_'+idx);
+  if(btnCam) btnCam.style.display='none';
+  const kb = Math.round(fotoData[idx].length*0.75/1024);
+  document.getElementById('foto_status_'+idx).className='foto-status ok';
+  document.getElementById('foto_status_'+idx).textContent=`✅ Foto lista (~${kb}KB) — click para cambiar`;
   document.getElementById('fb_'+idx).classList.remove('error-box');
+}
+
+function retomarFoto(idx){
+  fotoData[idx]=null;
+  if(streams[idx]){streams[idx].getTracks().forEach(t=>t.stop());streams[idx]=null;}
+  document.getElementById('preview_'+idx).classList.remove('visible');
+  document.getElementById('foto_status_'+idx).className='foto-status';
+  document.getElementById('foto_status_'+idx).textContent='Sin foto';
+  const input=document.getElementById('foto_input_'+idx);
+  if(input) input.value='';
+  document.getElementById('fb_'+idx).classList.remove('error-box');
+  // Reconstruir el box
+  buildFotoBox(idx);
 }
 
 // ─── MATERIALES ──────────────────────────────────────────────
