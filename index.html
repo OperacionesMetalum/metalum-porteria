@@ -764,7 +764,8 @@ function formatFechaLocal(){
 
 function setOnline(online){
   isOnline = online;
-  document.getElementById('offlineBar').classList.toggle('visible', !online);
+  const bar = document.getElementById('offlineBar');
+  if(bar) bar.classList.toggle('visible', !online);
   setSyncOk(online);
 }
 
@@ -776,7 +777,7 @@ async function fetchDatos(){
   }catch(e){ setOnline(false); }
 }
 
-function setSyncOk(ok){ document.getElementById('syncDot').className='sync-dot '+(ok?'ok':'err'); }
+function setSyncOk(ok){ const d=document.getElementById('syncDot'); if(d) d.className='sync-dot '+(ok?'ok':'err'); }
 
 function startRefresh(){
   fetchDatos();
