@@ -925,7 +925,9 @@ async function guardarRegistro(){
   const nFotos = [fotosSnapshot[0],fotosSnapshot[1],fotosSnapshot[2]].filter(Boolean).length;
   if(nFotos > 0) btn.textContent = `Subiendo ${nFotos} foto${nFotos>1?'s':''}... (puede tomar unos segundos)`;
 
+  const submitId = Date.now() + '_' + Math.random().toString(36).slice(2,7);
   const result=await apiConCola('registrarProveedor',{
+    submitId,
     planta:currentPlant,proveedor:prov,patente:pat,material:mat,
     personas:per,empresa:getEmpresaFinal(),beeper,
     rut_chofer:rut,
