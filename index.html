@@ -915,15 +915,14 @@ async function guardarRegistro(){
   }
   if(!ok){toast('Completa todos los campos obligatorios','err');return;}
 
-  const btn=document.getElementById('btnReg');
-  btn.disabled=true;
-  btn.textContent='Guardando registro...';
-  // Snapshot de fotos antes de resetear cualquier cosa
+  // Cerrar modal inmediatamente
+  closeModal('regModal');
+  resetForm();
+  toast(`Registrando ${prov}... espera un momento`);
+
   const fotosSnapshot = {0:fotoData[0], 1:fotoData[1], 2:fotoData[2]};
 
-  // Actualizar texto mientras sube
-  const nFotos = [fotosSnapshot[0],fotosSnapshot[1],fotosSnapshot[2]].filter(Boolean).length;
-  if(nFotos > 0) btn.textContent = `Subiendo ${nFotos} foto${nFotos>1?'s':''}... (puede tomar unos segundos)`;
+
 
   const submitId = Date.now() + '_' + Math.random().toString(36).slice(2,7);
   const result=await apiConCola('registrarProveedor',{
@@ -938,13 +937,12 @@ async function guardarRegistro(){
     foto_acomp2:fotosSnapshot[2]||null,
   });
 
-  btn.disabled=false;btn.textContent='✓ Registrar';
   if(result.ok){
-    closeModal('regModal');
-    resetForm();
     toast(`${prov} registrado ✓`,'ok');
     fetchDatos();
-  } else toast('Error: '+result.error,'err');
+  } else {
+    toast(`Error al registrar ${prov} — revisa conexión`,'err');
+  }
 }
 
 function resetForm(){
@@ -971,8 +969,8 @@ async function guardarMovimiento(){
   if(r.ok){closeModal('movModal');toast(`${tipo} — ${pat}`,'ok');fetchDatos();}
   else toast('Error: '+r.error,'err');
 }
-async function quickEntrada(p){const r=await apiConCola('registrarMovimiento',{planta:currentPlant,patente:p,tipo:'ENTRADA'});if(r.ok){toast(`ENTRADA — ${p}`,'ok');fetchDatos();}else toast('Error: '+r.error,'err');}
-async function quickSalida(p){const r=await apiConCola('registrarMovimiento',{planta:currentPlant,patente:p,tipo:'SALIDA'});if(r.ok){toast(`SALIDA — ${p}`,'ok');fetchDatos();}else toast('Error: '+r.error,'err');}
+async function quickEntrada(p){const r=await apiConCola('registrarMovimiento',{planta:currentPlant,patente:p,tipo:'ENTRADA',submitId:Date.now()+'_'+Math.random().toString(36).slice(2,7)});if(r.ok){toast(`ENTRADA — ${p}`,'ok');fetchDatos();}else toast('Error: '+r.error,'err');}
+async function quickSalida(p){const r=await apiConCola('registrarMovimiento',{planta:currentPlant,patente:p,tipo:'SALIDA',submitId:Date.now()+'_'+Math.random().toString(36).slice(2,7)});if(r.ok){toast(`SALIDA — ${p}`,'ok');fetchDatos();}else toast('Error: '+r.error,'err');}
 
 // ─── SUBIDA DE FOTOS EN BACKGROUND ──────────────────────────
 async function subirFotosBackground(patente, personas){
