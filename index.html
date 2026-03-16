@@ -916,22 +916,33 @@ async function guardarRegistro(){
   if(!ok){toast('Completa todos los campos obligatorios','err');return;}
 
   const btn=document.getElementById('btnReg');
-  btn.disabled=true;btn.textContent='Subiendo fotos...';
+  btn.disabled=true;
+  btn.textContent='Guardando registro...';
+  // Snapshot de fotos antes de resetear cualquier cosa
+  const fotosSnapshot = {0:fotoData[0], 1:fotoData[1], 2:fotoData[2]};
+
+  // Actualizar texto mientras sube
+  const nFotos = [fotosSnapshot[0],fotosSnapshot[1],fotosSnapshot[2]].filter(Boolean).length;
+  if(nFotos > 0) btn.textContent = `Subiendo ${nFotos} foto${nFotos>1?'s':''}... (puede tomar unos segundos)`;
 
   const result=await apiConCola('registrarProveedor',{
     planta:currentPlant,proveedor:prov,patente:pat,material:mat,
     personas:per,empresa:getEmpresaFinal(),beeper,
     rut_chofer:rut,
-    foto_chofer:fotoData[0]||null,
+    foto_chofer:fotosSnapshot[0]||null,
     rut_acomp1:document.getElementById('r_rut1').value.trim(),
-    foto_acomp1:fotoData[1]||null,
+    foto_acomp1:fotosSnapshot[1]||null,
     rut_acomp2:document.getElementById('r_rut2').value.trim(),
-    foto_acomp2:fotoData[2]||null,
+    foto_acomp2:fotosSnapshot[2]||null,
   });
 
   btn.disabled=false;btn.textContent='✓ Registrar';
-  if(result.ok){closeModal('regModal');toast(`${prov} registrado ✓`,'ok');resetForm();fetchDatos();}
-  else toast('Error: '+result.error,'err');
+  if(result.ok){
+    resetForm();
+    closeModal('regModal');
+    toast(`${prov} registrado ✓`,'ok');
+    fetchDatos();
+  } else toast('Error: '+result.error,'err');
 }
 
 function resetForm(){
