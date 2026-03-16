@@ -427,6 +427,7 @@ const MAT_METALUM = ['UBC','Perfil','Tense','Blando','Radiador','Chatarra'];
 let currentPlant='', cache={registros:[],movimientos:[]}, refreshInterval=null;
 let materialesSeleccionados=[];
 let fotoData={0:null,1:null,2:null};
+let fotoDataTemp={0:null,1:null,2:null};
 let pinTarget='', pinCurrent='';
 
 // ─── PIN ─────────────────────────────────────────────────────
@@ -568,6 +569,7 @@ function mostrarPreview(idx, dataUrl){
   document.getElementById('foto_status_'+idx).className='foto-status ok';
   document.getElementById('foto_status_'+idx).textContent=`✅ Foto lista (~${kb}KB) — click para cambiar`;
   document.getElementById('fb_'+idx).classList.remove('error-box');
+  fotoDataTemp[idx] = fotoData[idx]; // guardar copia para subida background
 }
 
 function retomarFoto(idx){
@@ -914,21 +916,27 @@ async function guardarRegistro(){
   if(!ok){toast('Completa todos los campos obligatorios','err');return;}
 
   const btn=document.getElementById('btnReg');
-  btn.disabled=true;btn.textContent='Subiendo fotos...';
+  btn.disabled=true;btn.textContent='Guardando...';
 
+  // Paso 1: guardar registro SIN fotos — respuesta inmediata
   const result=await apiConCola('registrarProveedor',{
     planta:currentPlant,proveedor:prov,patente:pat,material:mat,
     personas:per,empresa:getEmpresaFinal(),beeper,
-    rut_chofer:rut,foto_chofer:fotoData[0],
-    rut_acomp1:document.getElementById('r_rut1').value.trim(),
-    foto_acomp1:fotoData[1]||null,
-    rut_acomp2:document.getElementById('r_rut2').value.trim(),
-    foto_acomp2:fotoData[2]||null,
+    rut_chofer:rut,foto_chofer:null,
+    rut_acomp1:document.getElementById('r_rut1').value.trim(),foto_acomp1:null,
+    rut_acomp2:document.getElementById('r_rut2').value.trim(),foto_acomp2:null,
   });
 
   btn.disabled=false;btn.textContent='✓ Registrar';
-  if(result.ok){closeModal('regModal');toast(`${prov} registrado ✓`,'ok');resetForm();fetchDatos();}
-  else toast('Error: '+result.error,'err');
+
+  if(result.ok){
+    closeModal('regModal');
+    toast(`${prov} registrado ✓`,'ok');
+    resetForm();
+    fetchDatos();
+    // Paso 2: subir fotos en background sin bloquear al guardia
+    subirFotosBackground(pat, per);
+  } else toast('Error: '+result.error,'err');
 }
 
 function resetForm(){
@@ -957,6 +965,26 @@ async function guardarMovimiento(){
 }
 async function quickEntrada(p){const r=await apiConCola('registrarMovimiento',{planta:currentPlant,patente:p,tipo:'ENTRADA'});if(r.ok){toast(`ENTRADA — ${p}`,'ok');fetchDatos();}else toast('Error: '+r.error,'err');}
 async function quickSalida(p){const r=await apiConCola('registrarMovimiento',{planta:currentPlant,patente:p,tipo:'SALIDA'});if(r.ok){toast(`SALIDA — ${p}`,'ok');fetchDatos();}else toast('Error: '+r.error,'err');}
+
+// ─── SUBIDA DE FOTOS EN BACKGROUND ──────────────────────────
+async function subirFotosBackground(patente, personas){
+  const fotos = [];
+  if(fotoDataTemp[0]) fotos.push({idx:0, tipo:'chofer',   b64: fotoDataTemp[0]});
+  if(fotoDataTemp[1]) fotos.push({idx:1, tipo:'acomp1',   b64: fotoDataTemp[1]});
+  if(fotoDataTemp[2]) fotos.push({idx:2, tipo:'acomp2',   b64: fotoDataTemp[2]});
+  if(!fotos.length) return;
+  try {
+    await api('subirFotos',{
+      planta: currentPlant,
+      patente,
+      fotos: fotos.map(f=>({tipo:f.tipo, b64:f.b64}))
+    });
+  } catch(e) {
+    // Falló silenciosamente — las fotos no son críticas para la operación
+    console.warn('Fotos no subidas:', e);
+  }
+  fotoDataTemp = {0:null,1:null,2:null};
+}
 
 // ─── EDITAR PATENTE ──────────────────────────────────────────
 function abrirEdicion(patente, fecha){
