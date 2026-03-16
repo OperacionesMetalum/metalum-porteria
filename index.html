@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Metalum — Control de Portería</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0f0f0f;--surface:#171717;--surface2:#1f1f1f;--border:#2a2a2a;
+  --accent:#e8a020;--text:#f0f0f0;--text2:#888;--text3:#444;
+  --green:#2d7a4f;--green-l:#3aaa6a;--yellow-l:#e8a820;
+  --red:#8a2020;--red-l:#e83030;--r:8px;
+  --fh:'Syne',sans-serif;--fm:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--fm);min-height:100vh;display:flex;flex-direction:column;}
+body.renca{--accent:#e8a020;}
+body.pintana{--accent:#2080e8;}
+
+header{background:var(--surface);border-bottom:2px solid var(--accent);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:52px;position:sticky;top:0;z-index:100;transition:border-color .3s;}
+.logo{font-family:var(--fh);font-weight:800;font-size:16px;display:flex;align-items:center;gap:8px;}
+.dot{width:7px;height:7px;background:var(--accent);border-radius:50%;animation:pulse 2s infinite;transition:background .3s;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+.header-r{display:flex;align-items:center;gap:12px;}
+#clock{font-size:12px;color:var(--text2);letter-spacing:1px;}
+.plant-badge{background:var(--accent);color:#000;font-family:var(--fh);font-weight:700;font-size:11px;padding:3px 10px;border-radius:4px;cursor:pointer;letter-spacing:1px;transition:background .3s;}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--text3);}
+.sync-dot.ok{background:var(--green-l);}.sync-dot.err{background:var(--red-l);}
+
+nav{background:var(--surface);border-bottom:1px solid var(--border);display:flex;padding:0 20px;}
+.nb{background:none;border:none;color:var(--text2);font-family:var(--fm);font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:11px 16px;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;display:flex;align-items:center;gap:7px;}
+.nb:hover{color:var(--text);}.nb.active{color:var(--accent);border-bottom-color:var(--accent);}
+.nc{background:var(--accent);color:#000;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;min-width:16px;text-align:center;transition:background .3s;}
+
+main{flex:1;padding:20px;max-width:1400px;width:100%;margin:0 auto;}
+.view{display:none;}.view.active{display:block;}
+
+.btn{font-family:var(--fm);font-size:12px;padding:9px 16px;border-radius:var(--r);border:none;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:7px;font-weight:500;}
+.btn-p{background:var(--accent);color:#000;}.btn-p:hover{filter:brightness(1.1);}
+.btn-g{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+.btn-g:hover{border-color:var(--accent);color:var(--accent);}
+.btn-green{background:var(--green);color:#fff;}.btn-green:hover{background:var(--green-l);}
+.btn-red{background:var(--red);color:#fff;}.btn-red:hover{background:var(--red-l);}
+.btn-sm{padding:5px 11px;font-size:11px;}.btn:disabled{opacity:.4;cursor:not-allowed;}
+
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--accent);border-radius:12px;padding:26px;width:560px;max-width:95vw;max-height:92vh;overflow-y:auto;animation:su .2s ease;transition:border-color .3s;}
+@keyframes su{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.modal-title{font-family:var(--fh);font-size:17px;font-weight:700;margin-bottom:18px;display:flex;align-items:center;gap:10px;}
+.micon{width:30px;height:30px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;color:#000;font-size:15px;transition:background .3s;}
+
+.fg{margin-bottom:14px;}
+.fl{display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:5px;}
+.fl .req{color:var(--red-l);margin-left:2px;}
+.fi,.fs{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--fm);font-size:13px;padding:9px 12px;border-radius:var(--r);outline:none;transition:border-color .15s;}
+.fi:focus,.fs:focus{border-color:var(--accent);}.fi::placeholder{color:var(--text3);}
+.fi.error,.fs.error,.error-box{border-color:var(--red-l)!important;}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.fa{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--border);}
+.sep{height:1px;background:var(--border);margin:16px 0;}
+.section-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* MATERIALES */
+.mat-selector{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+.mat-selector.error{border-color:var(--red-l);}
+.mat-options{display:grid;grid-template-columns:repeat(3,1fr);}
+.mat-opt{padding:9px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);display:flex;align-items:center;gap:7px;transition:background .1s;user-select:none;position:relative;}
+.mat-opt:hover{background:var(--surface2);}
+.mat-opt.selected{background:rgba(255,255,255,.04);color:var(--accent);}
+.mat-num{font-size:10px;background:var(--accent);color:#000;border-radius:3px;padding:0 5px;font-weight:700;min-width:18px;text-align:center;display:none;}
+.mat-opt.selected .mat-num{display:inline;}
+.mat-dot{width:8px;height:8px;border-radius:50%;border:1px solid var(--text3);flex-shrink:0;}
+.mat-opt.selected .mat-dot{background:var(--accent);border-color:var(--accent);}
+.mat-reinsa-tag{font-size:9px;color:#60aaff;position:absolute;right:5px;top:3px;}
+.mat-footer{padding:8px 12px;border-top:1px solid var(--border);font-size:11px;}
+.mat-otro-input{padding:8px 12px;border-top:1px solid var(--border);display:none;}
+.mat-otro-input.visible{display:block;}
+
+/* EMPRESA AUTO */
+.empresa-auto{display:flex;gap:8px;flex-wrap:wrap;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);min-height:40px;align-items:center;}
+.empresa-auto.empty{color:var(--text3);font-size:11px;}
+
+/* FOTO CARNET */
+.foto-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+.foto-box.error-box{border-color:var(--red-l);}
+.foto-inner{padding:12px;display:flex;flex-direction:column;gap:8px;}
+.foto-preview{width:100%;max-height:150px;object-fit:cover;border-radius:4px;display:none;}
+.foto-preview.visible{display:block;}
+.foto-actions{display:flex;gap:8px;}
+.foto-status{font-size:11px;color:var(--text2);display:flex;align-items:center;gap:6px;}
+.foto-status.ok{color:var(--green-l);}
+/* cámara */
+.cam-wrap{position:relative;width:100%;}
+video{width:100%;border-radius:4px;max-height:160px;object-fit:cover;background:#000;display:block;}
+.cam-overlay{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);}
+
+/* ACOMPAÑANTE */
+.acomp-section{display:none;}.acomp-section.visible{display:block;}
+
+/* PIN */
+.pin-modal{width:340px;text-align:center;}
+.pin-modal h2{font-family:var(--fh);font-size:20px;font-weight:800;margin-bottom:4px;}
+.pin-sub{color:var(--text2);font-size:12px;margin-bottom:16px;}
+.pin-display{font-family:var(--fh);font-size:36px;letter-spacing:12px;margin:12px 0;min-height:48px;color:var(--accent);}
+.pin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
+.pin-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--fh);font-size:20px;font-weight:700;padding:16px;border-radius:var(--r);cursor:pointer;transition:all .1s;}
+.pin-btn:hover{background:var(--border);}.pin-btn:active{transform:scale(.95);}
+.pin-error{color:var(--red-l);font-size:11px;height:16px;margin-bottom:6px;}
+
+/* PLANT SELECT */
+.pm{text-align:center;}
+.pm h2{font-family:var(--fh);font-size:22px;font-weight:800;margin-bottom:6px;}
+.pm p{color:var(--text2);font-size:12px;margin-bottom:20px;}
+.po{background:var(--surface2);border:2px solid var(--border);border-radius:var(--r);padding:16px 20px;cursor:pointer;transition:all .2s;font-family:var(--fh);font-size:14px;font-weight:700;color:var(--text);text-align:left;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;width:100%;}
+.po.renca-opt:hover{border-color:#e8a020;color:#e8a020;}
+.po.pinta-opt:hover{border-color:#2080e8;color:#2080e8;}
+.po-dot{width:10px;height:10px;border-radius:50%;}
+.po .ps{font-family:var(--fm);font-size:10px;color:var(--text3);font-weight:400;margin-top:2px;}
+
+/* STATS */
+.sg{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px;}
+.sc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;}
+.sc.accent-border{border-left:3px solid var(--accent);}
+.sl{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-bottom:6px;}
+.sv{font-family:var(--fh);font-size:28px;font-weight:800;color:var(--accent);line-height:1;}
+.ss{font-size:11px;color:var(--text3);margin-top:3px;}
+
+.dp{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.tc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+.pt{font-family:var(--fh);font-size:13px;font-weight:700;padding:11px 14px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.scroll{max-height:460px;overflow-y:auto;}
+table{width:100%;border-collapse:collapse;}
+th{background:var(--surface2);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);padding:10px 14px;text-align:left;font-weight:500;border-bottom:1px solid var(--border);}
+td{padding:10px 14px;font-size:12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr.rg{background:rgba(45,122,79,.1);}tr.ry{background:rgba(168,120,32,.13);}tr.rr{background:rgba(138,32,32,.15);}
+.empty{text-align:center;padding:40px;color:var(--text3);font-size:12px;}
+
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:500;}
+.b-g{background:rgba(58,170,106,.12);color:var(--green-l);border:1px solid rgba(58,170,106,.25);}
+.b-y{background:rgba(232,168,32,.12);color:var(--yellow-l);border:1px solid rgba(232,168,32,.25);}
+.b-r{background:rgba(232,48,48,.12);color:var(--red-l);border:1px solid rgba(232,48,48,.25);}
+.b-gr{background:rgba(136,136,136,.1);color:var(--text2);border:1px solid rgba(136,136,136,.2);}
+.b-blue{background:rgba(32,128,232,.12);color:#60aaff;border:1px solid rgba(32,128,232,.25);}
+
+.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.st{font-family:var(--fh);font-size:20px;font-weight:700;}.st span{color:var(--accent);}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);color:var(--text);font-size:12px;padding:12px 16px;border-radius:var(--r);z-index:999;animation:ti .25s ease;max-width:300px;}
+@keyframes ti{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.toast.ok{border-left-color:var(--green-l);}.toast.err{border-left-color:var(--red-l);}
+.fb{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+.fb .fi{width:auto;flex:1;min-width:140px;}
+::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:var(--bg);}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+@media(max-width:900px){.dp{grid-template-columns:1fr}.sg{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:500px){.fr{grid-template-columns:1fr}.mat-options{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<!-- PLANT SELECT -->
+<div class="overlay open" id="plantModal">
+  <div class="modal pm" style="width:400px">
+    <div style="font-size:32px;margin-bottom:10px">🏭</div>
+    <h2>Metalum S.A.</h2>
+    <p>Selecciona la planta para continuar</p>
+    <button class="po renca-opt" onclick="initPin('Renca')">
+      <div><div style="display:flex;align-items:center;gap:8px"><div class="po-dot" style="background:#e8a020"></div>Planta Renca</div><div class="ps">Santiago — Renca</div></div>
+      <span style="color:var(--text3)">→</span>
+    </button>
+    <button class="po pinta-opt" onclick="initPin('La Pintana')">
+      <div><div style="display:flex;align-items:center;gap:8px"><div class="po-dot" style="background:#2080e8"></div>Planta La Pintana</div><div class="ps">Santiago — La Pintana</div></div>
+      <span style="color:var(--text3)">→</span>
+    </button>
+  </div>
+</div>
+
+<!-- PIN -->
+<div class="overlay" id="pinModal">
+  <div class="modal pin-modal">
+    <div style="font-size:26px;margin-bottom:8px">🔐</div>
+    <h2 id="pinPlantName"></h2>
+    <div class="pin-sub">Ingresa el PIN de acceso</div>
+    <div class="pin-display" id="pinDisplay">____</div>
+    <div class="pin-error" id="pinError"></div>
+    <div class="pin-grid">
+      <button class="pin-btn" onclick="pinKey('1')">1</button>
+      <button class="pin-btn" onclick="pinKey('2')">2</button>
+      <button class="pin-btn" onclick="pinKey('3')">3</button>
+      <button class="pin-btn" onclick="pinKey('4')">4</button>
+      <button class="pin-btn" onclick="pinKey('5')">5</button>
+      <button class="pin-btn" onclick="pinKey('6')">6</button>
+      <button class="pin-btn" onclick="pinKey('7')">7</button>
+      <button class="pin-btn" onclick="pinKey('8')">8</button>
+      <button class="pin-btn" onclick="pinKey('9')">9</button>
+      <button class="pin-btn" onclick="pinKey('back')" style="font-size:14px">⌫</button>
+      <button class="pin-btn" onclick="pinKey('0')">0</button>
+      <button class="pin-btn btn-g" onclick="pinKey('cancel')" style="font-size:11px">✕</button>
+    </div>
+  </div>
+</div>
+
+<!-- REGISTRO MODAL -->
+<div class="overlay" id="regModal">
+  <div class="modal">
+    <div class="modal-title"><div class="micon">📋</div>Registro de Proveedor</div>
+
+    <div class="fg">
+      <label class="fl">Nombre Proveedor <span class="req">*</span></label>
+      <input class="fi" id="r_prov" placeholder="Razón social o nombre"/>
+    </div>
+    <div class="fr">
+      <div class="fg">
+        <label class="fl">Patente <span class="req">*</span></label>
+        <input class="fi" id="r_pat" placeholder="AB.CD.12" maxlength="8" oninput="fmtPatente(this)"/>
+      </div>
+      <div class="fg">
+        <label class="fl">N° Beeper <span class="req">*</span></label>
+        <input class="fi" id="r_beeper" type="number" placeholder="Ej: 5" min="1" max="99"/>
+      </div>
+    </div>
+
+    <div class="fg">
+      <label class="fl">Material(es) a Descargar <span class="req">*</span> <span style="color:var(--text3);font-size:9px;text-transform:none;letter-spacing:0">— en orden de descarga</span></label>
+      <div class="mat-selector" id="mat-selector">
+        <div class="mat-options" id="mat-options"></div>
+        <div class="mat-otro-input" id="mat-otro-input">
+          <input class="fi" id="r_mat_otro" placeholder="Especifica el material..."/>
+        </div>
+        <div class="mat-footer" id="mat-display" style="color:var(--text3)">Sin selección</div>
+      </div>
+    </div>
+
+    <div class="fg">
+      <label class="fl">Descarga en</label>
+      <div class="empresa-auto empty" id="empresa-auto">Selecciona materiales para ver destino</div>
+    </div>
+
+    <div class="sep"></div>
+
+    <div class="fg">
+      <label class="fl">Personas en el vehículo <span class="req">*</span></label>
+      <select class="fs" id="r_per" onchange="updatePersonas()">
+        <option value="1">1 — Solo chofer</option>
+        <option value="2">2 — Chofer + 1 acompañante</option>
+        <option value="3">3 — Chofer + 2 acompañantes</option>
+      </select>
+    </div>
+
+    <!-- CHOFER -->
+    <div class="section-label">Chofer</div>
+    <div class="fg">
+      <label class="fl">RUT <span class="req">*</span></label>
+      <input class="fi" id="r_rut" placeholder="12.345.678-9" maxlength="12" oninput="fmtRut(this)"/>
+    </div>
+    <div class="fg">
+      <label class="fl">Foto Carnet de Identidad <span class="req">*</span></label>
+      <div id="fotobox_0"></div>
+    </div>
+
+    <!-- ACOMP 1 -->
+    <div class="acomp-section" id="acomp1_section">
+      <div class="section-label">Acompañante 1</div>
+      <div class="fg">
+        <label class="fl">RUT <span class="req">*</span></label>
+        <input class="fi" id="r_rut1" placeholder="12.345.678-9" maxlength="12" oninput="fmtRut(this)"/>
+      </div>
+      <div class="fg">
+        <label class="fl">Foto Carnet de Identidad <span class="req">*</span></label>
+        <div id="fotobox_1"></div>
+      </div>
+    </div>
+
+    <!-- ACOMP 2 -->
+    <div class="acomp-section" id="acomp2_section">
+      <div class="section-label">Acompañante 2</div>
+      <div class="fg">
+        <label class="fl">RUT <span class="req">*</span></label>
+        <input class="fi" id="r_rut2" placeholder="12.345.678-9" maxlength="12" oninput="fmtRut(this)"/>
+      </div>
+      <div class="fg">
+        <label class="fl">Foto Carnet de Identidad <span class="req">*</span></label>
+        <div id="fotobox_2"></div>
+      </div>
+    </div>
+
+    <div class="fa">
+      <button class="btn btn-g" onclick="closeModal('regModal')">Cancelar</button>
+      <button class="btn btn-p" id="btnReg" onclick="guardarRegistro()">✓ Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MOVIMIENTO MODAL -->
+<div class="overlay" id="movModal">
+  <div class="modal" style="width:380px">
+    <div class="modal-title"><div class="micon">🚛</div>Registrar Movimiento</div>
+    <div class="fg">
+      <label class="fl">Patente <span class="req">*</span></label>
+      <input class="fi" id="m_pat" placeholder="AB.CD.12" maxlength="8" oninput="fmtPatente(this)"/>
+    </div>
+    <div class="fg">
+      <label class="fl">Tipo <span class="req">*</span></label>
+      <select class="fs" id="m_tipo">
+        <option value="ENTRADA">ENTRADA — Ingreso a planta</option>
+        <option value="SALIDA">SALIDA — Salida de planta</option>
+      </select>
+    </div>
+    <div class="fa">
+      <button class="btn btn-g" onclick="closeModal('movModal')">Cancelar</button>
+      <button class="btn btn-p" id="btnMov" onclick="guardarMovimiento()">✓ Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo"><div class="dot"></div>METALUM PORTERÍA</div>
+  <div class="header-r">
+    <div class="sync-dot" id="syncDot"></div>
+    <span id="clock"></span>
+    <span class="plant-badge" id="plantBadge" onclick="document.getElementById('plantModal').classList.add('open')">— Planta —</span>
+  </div>
+</header>
+
+<nav>
+  <button class="nb active" onclick="showView('monitor')" id="nav-monitor">📡 Monitor <span class="nc" id="cnt">0</span></button>
+  <button class="nb" onclick="showView('registro')" id="nav-registro">📋 Registro</button>
+  <button class="nb" onclick="showView('historial')" id="nav-historial">📂 Historial</button>
+</nav>
+
+<main>
+  <!-- MONITOR -->
+  <div class="view active" id="view-monitor">
+    <div class="sg">
+      <div class="sc accent-border"><div class="sl">En espera</div><div class="sv" id="s-esp">—</div><div class="ss">camiones aguardando</div></div>
+      <div class="sc accent-border"><div class="sl">En planta</div><div class="sv" id="s-pla">—</div><div class="ss">descargando</div></div>
+      <div class="sc"><div class="sl">Hoy total</div><div class="sv" id="s-hoy">—</div><div class="ss">ingresos del día</div></div>
+      <div class="sc"><div class="sl">Prom. espera</div><div class="sv" id="s-prom-esp" style="font-size:20px">—</div><div class="ss">tiempo promedio hoy</div></div>
+      <div class="sc"><div class="sl">Prom. en planta</div><div class="sv" id="s-prom-pla" style="font-size:20px">—</div><div class="ss">tiempo promedio hoy</div></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button class="btn btn-p" onclick="openModal('regModal')">+ Registro</button>
+      <button class="btn btn-g" onclick="openMovModal()">⇄ Movimiento</button>
+      <button class="btn btn-g btn-sm" onclick="fetchDatos()" style="margin-left:auto">↻ Actualizar</button>
+    </div>
+    <div class="dp">
+      <div class="tc">
+        <div class="pt">🕐 En Espera <span class="badge b-y" id="b-esp">0</span></div>
+        <div class="scroll"><table><thead><tr><th>Hora</th><th>Proveedor</th><th>Patente</th><th>Beeper</th><th>Destino</th><th>Espera</th><th></th></tr></thead>
+        <tbody id="tb-esp"><tr><td colspan="7" class="empty">Cargando...</td></tr></tbody></table></div>
+      </div>
+      <div class="tc">
+        <div class="pt">🏭 En Planta <span class="badge b-g" id="b-pla">0</span></div>
+        <div class="scroll"><table><thead><tr><th>Entrada</th><th>Proveedor</th><th>Patente</th><th>Material</th><th>Destino</th><th></th></tr></thead>
+        <tbody id="tb-pla"><tr><td colspan="6" class="empty">Cargando...</td></tr></tbody></table></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REGISTRO -->
+  <div class="view" id="view-registro">
+    <div class="sh">
+      <div class="st">Registro de <span>Proveedores</span></div>
+      <button class="btn btn-p" onclick="openModal('regModal')">+ Nuevo registro</button>
+    </div>
+    <div class="tc">
+      <table><thead><tr><th>Fecha y hora</th><th>Proveedor</th><th>Patente</th><th>Material</th><th>Destino</th><th>Beeper</th><th>Estado</th><th></th></tr></thead>
+      <tbody id="tb-reg"><tr><td colspan="8" class="empty">Cargando...</td></tr></tbody></table>
+    </div>
+  </div>
+
+  <!-- HISTORIAL -->
+  <div class="view" id="view-historial">
+    <div class="sh">
+      <div class="st">Historial <span>Completo</span></div>
+      <button class="btn btn-g" onclick="exportCSV()">↓ Exportar CSV</button>
+    </div>
+    <div class="fb">
+      <input class="fi" id="f-fecha" type="date" oninput="renderHistorial()" style="width:auto"/>
+      <input class="fi" id="f-text" placeholder="Buscar patente o proveedor..." oninput="renderHistorial()"/>
+      <button class="btn btn-g btn-sm" onclick="clearFilters()">✕ Limpiar</button>
+    </div>
+    <div class="tc">
+      <table><thead><tr><th>Registro</th><th>Proveedor</th><th>Patente</th><th>Material</th><th>Destino</th><th>Beeper</th><th>Entrada</th><th>Salida</th><th>T. Planta</th><th>Estado</th><th>Carnets</th></tr></thead>
+      <tbody id="tb-hist"><tr><td colspan="11" class="empty">Cargando...</td></tr></tbody></table>
+    </div>
+  </div>
+</main>
+
+<script>
+const SCRIPT_URL = 'TU_URL_AQUI';
+const PINS = {'Renca':'2084','La Pintana':'2240'};
+const MATERIALES = ['UBC','Perfil','Papel','Cartón','PET','Tense','Blando','Radiador','Chatarra','Otro'];
+const MAT_REINSA = ['Papel','Cartón','PET'];
+const MAT_METALUM = ['UBC','Perfil','Tense','Blando','Radiador','Chatarra'];
+
+let currentPlant='', cache={registros:[],movimientos:[]}, refreshInterval=null;
+let materialesSeleccionados=[];
+let fotoData={0:null,1:null,2:null};
+let streams={0:null,1:null,2:null};
+let pinTarget='', pinCurrent='';
+
+// ─── PIN ─────────────────────────────────────────────────────
+function initPin(plant){
+  pinTarget=plant; pinCurrent='';
+  document.getElementById('pinPlantName').textContent=plant==='Renca'?'🟠 Planta Renca':'🔵 Planta La Pintana';
+  document.getElementById('pinDisplay').textContent='____';
+  document.getElementById('pinError').textContent='';
+  document.getElementById('plantModal').classList.remove('open');
+  document.getElementById('pinModal').classList.add('open');
+}
+function pinKey(k){
+  if(k==='cancel'){document.getElementById('pinModal').classList.remove('open');document.getElementById('plantModal').classList.add('open');return;}
+  if(k==='back') pinCurrent=pinCurrent.slice(0,-1);
+  else if(pinCurrent.length<4) pinCurrent+=k;
+  document.getElementById('pinDisplay').textContent='●'.repeat(pinCurrent.length).padEnd(4,'_');
+  document.getElementById('pinError').textContent='';
+  if(pinCurrent.length===4){
+    if(pinCurrent===PINS[pinTarget]){document.getElementById('pinModal').classList.remove('open');selectPlant(pinTarget);}
+    else{document.getElementById('pinError').textContent='PIN incorrecto. Intenta de nuevo.';pinCurrent='';document.getElementById('pinDisplay').textContent='____';}
+  }
+}
+
+// ─── PLANT ───────────────────────────────────────────────────
+function selectPlant(name){
+  currentPlant=name;
+  document.getElementById('plantBadge').textContent=name.toUpperCase();
+  document.body.className=name==='Renca'?'renca':'pintana';
+  startRefresh();
+}
+
+// ─── FOTO BOX ────────────────────────────────────────────────
+function buildFotoBox(idx){
+  const div=document.getElementById('fotobox_'+idx);
+  div.innerHTML=`
+    <div class="foto-box" id="fb_${idx}">
+      <div class="foto-inner">
+        <div class="cam-wrap" id="cam_wrap_${idx}">
+          <video id="video_${idx}" autoplay playsinline></video>
+          <div class="cam-overlay">
+            <button class="btn btn-p btn-sm" onclick="capturar(${idx})">📸 Capturar foto</button>
+          </div>
+        </div>
+        <img class="foto-preview" id="preview_${idx}" onclick="retomarFoto(${idx})"/>
+        <div class="foto-status" id="foto_status_${idx}">Sin foto — abre la cámara</div>
+        <div class="foto-actions">
+          <button class="btn btn-g btn-sm" id="btn_cam_${idx}" onclick="abrirCamara(${idx})">📷 Abrir cámara</button>
+        </div>
+      </div>
+    </div>
+    <canvas id="canvas_${idx}" style="display:none"></canvas>`;
+}
+
+async function abrirCamara(idx){
+  const wrap=document.getElementById('cam_wrap_'+idx);
+  wrap.style.display='block';
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}});
+    streams[idx]=stream;
+    document.getElementById('video_'+idx).srcObject=stream;
+    document.getElementById('btn_cam_'+idx).style.display='none';
+  }catch(e){toast('No se pudo acceder a la cámara. Asegúrate de estar en HTTPS.','err');}
+}
+
+function capturar(idx){
+  const video=document.getElementById('video_'+idx);
+  const canvas=document.getElementById('canvas_'+idx);
+  // Comprimir: máx 800px ancho, JPEG 70%
+  const maxW=800;
+  const scale=Math.min(1,maxW/video.videoWidth);
+  canvas.width=Math.round(video.videoWidth*scale);
+  canvas.height=Math.round(video.videoHeight*scale);
+  canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);
+  const dataUrl=canvas.toDataURL('image/jpeg',0.70);
+  fotoData[idx]=dataUrl.split(',')[1]; // solo base64, sin prefijo
+  // Mostrar preview
+  const preview=document.getElementById('preview_'+idx);
+  preview.src=dataUrl;
+  preview.classList.add('visible');
+  // Detener cámara
+  if(streams[idx]){streams[idx].getTracks().forEach(t=>t.stop());streams[idx]=null;}
+  document.getElementById('cam_wrap_'+idx).style.display='none';
+  const kb=Math.round(fotoData[idx].length*0.75/1024);
+  document.getElementById('foto_status_'+idx).className='foto-status ok';
+  document.getElementById('foto_status_'+idx).textContent=`✅ Foto capturada (~${kb}KB) — toca la imagen para reemplazar`;
+  document.getElementById('btn_cam_'+idx).style.display='none';
+  document.getElementById('fb_'+idx).classList.remove('error-box');
+}
+
+function retomarFoto(idx){
+  fotoData[idx]=null;
+  document.getElementById('preview_'+idx).classList.remove('visible');
+  document.getElementById('foto_status_'+idx).className='foto-status';
+  document.getElementById('foto_status_'+idx).textContent='Sin foto';
+  document.getElementById('btn_cam_'+idx).style.display='';
+  document.getElementById('cam_wrap_'+idx).style.display='none';
+}
+
+// ─── MATERIALES ──────────────────────────────────────────────
+function initMateriales(){
+  document.getElementById('mat-options').innerHTML=MATERIALES.map(m=>`
+    <div class="mat-opt" id="mopt_${m}" onclick="toggleMaterial('${m}')">
+      <div class="mat-dot"></div><span>${m}</span>
+      <span class="mat-num" id="mnum_${m}"></span>
+      ${MAT_REINSA.includes(m)?'<span class="mat-reinsa-tag">REINSA</span>':''}
+    </div>`).join('');
+}
+
+function toggleMaterial(m){
+  const idx=materialesSeleccionados.indexOf(m);
+  if(idx===-1) materialesSeleccionados.push(m);
+  else materialesSeleccionados.splice(idx,1);
+  MATERIALES.forEach(mat=>{
+    const sel=materialesSeleccionados.includes(mat);
+    document.getElementById('mopt_'+mat).classList.toggle('selected',sel);
+    document.getElementById('mnum_'+mat).textContent=sel?materialesSeleccionados.indexOf(mat)+1:'';
+  });
+  document.getElementById('mat-otro-input').classList.toggle('visible',materialesSeleccionados.includes('Otro'));
+  actualizarDestino();
+  const display=document.getElementById('mat-display');
+  display.innerHTML=materialesSeleccionados.length
+    ?materialesSeleccionados.map((m,i)=>`<span style="color:var(--text)">${i+1}. ${m}</span>`).join(' <span style="color:var(--text3)">→</span> ')
+    :'<span style="color:var(--text3)">Sin selección</span>';
+  document.getElementById('mat-selector').classList.remove('error');
+}
+
+function actualizarDestino(){
+  const mats=materialesSeleccionados.filter(m=>m!=='Otro');
+  const tieneR=mats.some(m=>MAT_REINSA.includes(m));
+  const tieneM=mats.some(m=>MAT_METALUM.includes(m));
+  const ea=document.getElementById('empresa-auto');
+  if(!mats.length){ea.className='empresa-auto empty';ea.textContent='Selecciona materiales para ver destino';return;}
+  ea.className='empresa-auto';
+  ea.innerHTML=(tieneM?'<span class="badge b-y">METALUM — Metales y Aluminios S.A.</span>':'')+
+               (tieneR?'<span class="badge b-blue">REINSA — Reciclados Industriales</span>':'');
+}
+
+function getEmpresaFinal(){
+  const mats=materialesSeleccionados.filter(m=>m!=='Otro');
+  const e=[];
+  if(mats.some(m=>MAT_METALUM.includes(m))) e.push('METALUM');
+  if(mats.some(m=>MAT_REINSA.includes(m))) e.push('REINSA');
+  return e.join(', ');
+}
+
+function getMaterialFinal(){
+  return materialesSeleccionados.map(m=>m==='Otro'?(document.getElementById('r_mat_otro').value.trim()||'Otro'):m).join(' → ');
+}
+
+// ─── FORMATO ─────────────────────────────────────────────────
+function fmtPatente(el){
+  let v=el.value.replace(/[^a-zA-Z0-9]/g,'').toUpperCase();
+  if(v.length>2)v=v.slice(0,2)+'.'+v.slice(2);
+  if(v.length>5)v=v.slice(0,5)+'.'+v.slice(5);
+  el.value=v.slice(0,8);
+}
+function fmtRut(el){
+  let v=el.value.replace(/[^0-9kK]/g,'').toUpperCase();
+  if(v.length>1){const dv=v.slice(-1);let num=v.slice(0,-1).replace(/\B(?=(\d{3})+(?!\d))/g,'.');v=num+'-'+dv;}
+  el.value=v.slice(0,12);
+}
+
+// ─── PERSONAS ────────────────────────────────────────────────
+function updatePersonas(){
+  const n=parseInt(document.getElementById('r_per').value);
+  document.getElementById('acomp1_section').classList.toggle('visible',n>=2);
+  document.getElementById('acomp2_section').classList.toggle('visible',n>=3);
+}
+
+// ─── API ─────────────────────────────────────────────────────
+async function api(action,data={}){
+  const res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action,data})});
+  return res.json();
+}
+async function fetchDatos(){
+  try{
+    const r=await api('getDatos',{planta:currentPlant});
+    if(r.ok){cache=r;setSyncOk(true);renderAll();}else setSyncOk(false);
+  }catch(e){setSyncOk(false);}
+}
+function setSyncOk(ok){document.getElementById('syncDot').className='sync-dot '+(ok?'ok':'err');}
+function startRefresh(){fetchDatos();if(refreshInterval)clearInterval(refreshInterval);refreshInterval=setInterval(fetchDatos,20000);}
+
+// ─── FECHA ───────────────────────────────────────────────────
+function parseFecha(str){
+  if(!str)return null;
+  const m=str.toString().trim().match(/(\d{2})-(\d{2})-(\d{4})\s+(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+  if(!m)return null;
+  let[,d,mo,y,h,mi,ap]=m;h=parseInt(h);mi=parseInt(mi);
+  if(ap){if(ap.toUpperCase()==='PM'&&h!==12)h+=12;if(ap.toUpperCase()==='AM'&&h===12)h=0;}
+  return new Date(y,mo-1,d,h,mi);
+}
+function formatHora(str){const d=parseFecha(str);return d?d.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}):str;}
+function formatElapsed(ms){if(ms<0)return'—';const m=Math.floor(ms/60000),h=Math.floor(m/60);return h>0?`${h}h ${m%60}m`:`${m}m`;}
+function isHoy(str){const d=parseFecha(str);if(!d)return false;const h=new Date();return d.getDate()===h.getDate()&&d.getMonth()===h.getMonth()&&d.getFullYear()===h.getFullYear();}
+
+// ─── ESTADO ──────────────────────────────────────────────────
+function getEstado(reg){
+  const ts=parseFecha(reg.fecha);if(!ts)return'ESPERA';
+  const movs=cache.movimientos.filter(m=>m.patente===reg.patente&&parseFecha(m.fecha)>ts);
+  const e=movs.filter(m=>m.tipo==='ENTRADA'),s=movs.filter(m=>m.tipo==='SALIDA');
+  if(!e.length)return'ESPERA';if(s.length>=e.length)return'SALIDA';return'PLANTA';
+}
+function getEntradaMov(reg){
+  const ts=parseFecha(reg.fecha);if(!ts)return null;
+  const e=cache.movimientos.filter(m=>m.patente===reg.patente&&m.tipo==='ENTRADA'&&parseFecha(m.fecha)>ts);
+  return e.length?e.reduce((a,b)=>parseFecha(a.fecha)<parseFecha(b.fecha)?a:b):null;
+}
+function getSalidaMov(reg){
+  const en=getEntradaMov(reg);if(!en)return null;
+  const eTs=parseFecha(en.fecha);
+  const s=cache.movimientos.filter(m=>m.patente===reg.patente&&m.tipo==='SALIDA'&&parseFecha(m.fecha)>eTs);
+  return s.length?s.reduce((a,b)=>parseFecha(a.fecha)<parseFecha(b.fecha)?a:b):null;
+}
+function waitClass(ms){const m=ms/60000;return m<15?'rg':m<30?'ry':'rr';}
+function waitBadge(ms){const m=ms/60000;return m<15?'b-g':m<30?'b-y':'b-r';}
+function empresaBadge(emp){
+  if(!emp)return'';
+  return emp.split(',').map(e=>e.trim()).map(p=>`<span class="badge ${p==='METALUM'?'b-y':'b-blue'}">${p}</span>`).join(' ');
+}
+
+// ─── RENDER ──────────────────────────────────────────────────
+function renderAll(){renderMonitor();renderRegistro();renderHistorial();}
+
+function renderMonitor(){
+  const now=Date.now();
+  const regsHoy=cache.registros.filter(r=>isHoy(r.fecha));
+  const enEspera=regsHoy.filter(r=>getEstado(r)==='ESPERA');
+  const enPlanta=regsHoy.filter(r=>getEstado(r)==='PLANTA');
+  const tEsp=enEspera.map(r=>now-parseFecha(r.fecha)).filter(t=>t>0);
+  const promEsp=tEsp.length?tEsp.reduce((a,b)=>a+b,0)/tEsp.length:0;
+  const tPla=regsHoy.filter(r=>getEstado(r)==='SALIDA').map(r=>{const e=getEntradaMov(r),s=getSalidaMov(r);return(e&&s)?parseFecha(s.fecha)-parseFecha(e.fecha):0;}).filter(t=>t>0);
+  const promPla=tPla.length?tPla.reduce((a,b)=>a+b,0)/tPla.length:0;
+  document.getElementById('s-esp').textContent=enEspera.length;
+  document.getElementById('s-pla').textContent=enPlanta.length;
+  document.getElementById('s-hoy').textContent=regsHoy.length;
+  document.getElementById('s-prom-esp').textContent=promEsp?formatElapsed(promEsp):'—';
+  document.getElementById('s-prom-pla').textContent=promPla?formatElapsed(promPla):'—';
+  document.getElementById('b-esp').textContent=enEspera.length;
+  document.getElementById('b-pla').textContent=enPlanta.length;
+  document.getElementById('cnt').textContent=enEspera.length;
+  const tbE=document.getElementById('tb-esp');
+  tbE.innerHTML=enEspera.length?enEspera.sort((a,b)=>parseFecha(a.fecha)-parseFecha(b.fecha)).map(r=>{
+    const el=now-parseFecha(r.fecha);
+    return`<tr class="${waitClass(el)}"><td>${formatHora(r.fecha)}</td><td>${r.proveedor}</td><td style="font-weight:600">${r.patente}</td><td style="text-align:center"><b>${r.beeper||'—'}</b></td><td>${empresaBadge(r.empresa)}</td><td><span class="badge ${waitBadge(el)}">${formatElapsed(el)}</span></td><td><button class="btn btn-green btn-sm" onclick="quickEntrada('${r.patente}')">Hacer pasar</button></td></tr>`;
+  }).join(''):'<tr><td colspan="7" class="empty">Sin camiones en espera</td></tr>';
+  const tbP=document.getElementById('tb-pla');
+  tbP.innerHTML=enPlanta.length?enPlanta.map(r=>{
+    const en=getEntradaMov(r);
+    return`<tr><td>${en?formatHora(en.fecha):'—'}</td><td>${r.proveedor}</td><td style="font-weight:600">${r.patente}</td><td style="color:var(--text2)">${r.material}</td><td>${empresaBadge(r.empresa)}</td><td><button class="btn btn-red btn-sm" onclick="quickSalida('${r.patente}')">Salida</button></td></tr>`;
+  }).join(''):'<tr><td colspan="6" class="empty">Sin camiones en planta</td></tr>';
+}
+
+function renderRegistro(){
+  const tbody=document.getElementById('tb-reg');
+  const regs=[...cache.registros].reverse();
+  const bmap={ESPERA:'<span class="badge b-y">En espera</span>',PLANTA:'<span class="badge b-g">En planta</span>',SALIDA:'<span class="badge b-gr">Completado</span>'};
+  tbody.innerHTML=regs.length?regs.map(r=>`<tr><td style="color:var(--text2);font-size:11px">${r.fecha}</td><td>${r.proveedor}</td><td style="font-weight:600">${r.patente}</td><td style="color:var(--text2)">${r.material}</td><td>${empresaBadge(r.empresa)}</td><td style="text-align:center">${r.beeper||'—'}</td><td>${bmap[getEstado(r)]}</td><td><button class="btn btn-g btn-sm" onclick="openMovModal('${r.patente}')">⇄</button></td></tr>`).join(''):'<tr><td colspan="8" class="empty">Sin registros</td></tr>';
+}
+
+function renderHistorial(){
+  const tbody=document.getElementById('tb-hist');
+  const fF=document.getElementById('f-fecha')?.value;
+  const fT=(document.getElementById('f-text')?.value||'').toLowerCase();
+  let regs=[...cache.registros].reverse();
+  if(fF){const[fy,fm,fd]=fF.split('-');regs=regs.filter(r=>{const d=parseFecha(r.fecha);return d&&d.getDate()==parseInt(fd)&&(d.getMonth()+1)==parseInt(fm)&&d.getFullYear()==parseInt(fy);});}
+  if(fT)regs=regs.filter(r=>r.patente.toLowerCase().includes(fT)||r.proveedor.toLowerCase().includes(fT));
+  const bmap={ESPERA:'<span class="badge b-y">En espera</span>',PLANTA:'<span class="badge b-g">En planta</span>',SALIDA:'<span class="badge b-gr">Completado</span>'};
+  tbody.innerHTML=regs.length?regs.map(r=>{
+    const en=getEntradaMov(r),sa=getSalidaMov(r);
+    const eTs=en?parseFecha(en.fecha):null,sTs=sa?parseFecha(sa.fecha):null;
+    // Links carnets
+    const carnets=[];
+    if(r.foto_chofer) carnets.push(`<a href="${r.foto_chofer}" target="_blank" style="color:var(--accent);font-size:11px">Chofer</a>`);
+    if(r.foto_acomp1) carnets.push(`<a href="${r.foto_acomp1}" target="_blank" style="color:var(--accent);font-size:11px">Acomp.1</a>`);
+    if(r.foto_acomp2) carnets.push(`<a href="${r.foto_acomp2}" target="_blank" style="color:var(--accent);font-size:11px">Acomp.2</a>`);
+    return`<tr><td style="font-size:11px;color:var(--text2)">${r.fecha}</td><td>${r.proveedor}</td><td style="font-weight:600">${r.patente}</td><td style="color:var(--text2)">${r.material}</td><td>${empresaBadge(r.empresa)}</td><td style="text-align:center">${r.beeper||'—'}</td><td>${en?formatHora(en.fecha):'—'}</td><td>${sa?formatHora(sa.fecha):'—'}</td><td>${eTs&&sTs?formatElapsed(sTs-eTs):eTs?'En curso':'—'}</td><td>${bmap[getEstado(r)]}</td><td>${carnets.join(' ')}</td></tr>`;
+  }).join(''):'<tr><td colspan="11" class="empty">Sin registros</td></tr>';
+}
+
+// ─── GUARDAR ─────────────────────────────────────────────────
+function validar(id,cond){const el=document.getElementById(id);if(el)el.classList.toggle('error',!cond);return!!cond;}
+
+async function guardarRegistro(){
+  const prov=document.getElementById('r_prov').value.trim();
+  const pat=document.getElementById('r_pat').value.trim();
+  const beeper=document.getElementById('r_beeper').value.trim();
+  const rut=document.getElementById('r_rut').value.trim();
+  const per=parseInt(document.getElementById('r_per').value)||1;
+  const mat=getMaterialFinal();
+  let ok=true;
+  if(!validar('r_prov',prov))ok=false;
+  if(!validar('r_pat',pat))ok=false;
+  if(!validar('r_beeper',beeper))ok=false;
+  if(!validar('r_rut',rut))ok=false;
+  if(!mat){document.getElementById('mat-selector').classList.add('error');ok=false;}
+  if(!fotoData[0]){document.getElementById('fb_0').classList.add('error-box');ok=false;}
+  if(per>=2){
+    if(!validar('r_rut1',document.getElementById('r_rut1').value.trim()))ok=false;
+    if(!fotoData[1]){document.getElementById('fb_1').classList.add('error-box');ok=false;}
+  }
+  if(per>=3){
+    if(!validar('r_rut2',document.getElementById('r_rut2').value.trim()))ok=false;
+    if(!fotoData[2]){document.getElementById('fb_2').classList.add('error-box');ok=false;}
+  }
+  if(!ok){toast('Completa todos los campos obligatorios','err');return;}
+
+  const btn=document.getElementById('btnReg');
+  btn.disabled=true;btn.textContent='Subiendo fotos...';
+
+  const result=await api('registrarProveedor',{
+    planta:currentPlant,proveedor:prov,patente:pat,material:mat,
+    personas:per,empresa:getEmpresaFinal(),beeper,
+    rut_chofer:rut,foto_chofer:fotoData[0],
+    rut_acomp1:document.getElementById('r_rut1').value.trim(),
+    foto_acomp1:fotoData[1]||null,
+    rut_acomp2:document.getElementById('r_rut2').value.trim(),
+    foto_acomp2:fotoData[2]||null,
+  });
+
+  btn.disabled=false;btn.textContent='✓ Registrar';
+  if(result.ok){closeModal('regModal');toast(`${prov} registrado ✓`,'ok');resetForm();fetchDatos();}
+  else toast('Error: '+result.error,'err');
+}
+
+function resetForm(){
+  ['r_prov','r_pat','r_beeper','r_rut','r_rut1','r_rut2','r_mat_otro'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('r_per').value='1';updatePersonas();
+  materialesSeleccionados=[];
+  MATERIALES.forEach(m=>{const el=document.getElementById('mopt_'+m);if(el){el.classList.remove('selected');document.getElementById('mnum_'+m).textContent='';}});
+  document.getElementById('mat-display').innerHTML='<span style="color:var(--text3)">Sin selección</span>';
+  document.getElementById('mat-otro-input').classList.remove('visible');
+  document.getElementById('empresa-auto').className='empresa-auto empty';
+  document.getElementById('empresa-auto').textContent='Selecciona materiales para ver destino';
+  fotoData={0:null,1:null,2:null};
+  Object.keys(streams).forEach(i=>{if(streams[i]){streams[i].getTracks().forEach(t=>t.stop());streams[i]=null;}});
+  [0,1,2].forEach(i=>buildFotoBox(i));
+}
+
+async function guardarMovimiento(){
+  const pat=document.getElementById('m_pat').value.trim();
+  const tipo=document.getElementById('m_tipo').value;
+  if(!pat){toast('Ingresa la patente','err');return;}
+  const btn=document.getElementById('btnMov');
+  btn.disabled=true;btn.textContent='Guardando...';
+  const r=await api('registrarMovimiento',{planta:currentPlant,patente:pat,tipo});
+  btn.disabled=false;btn.textContent='✓ Confirmar';
+  if(r.ok){closeModal('movModal');toast(`${tipo} — ${pat}`,'ok');fetchDatos();}
+  else toast('Error: '+r.error,'err');
+}
+async function quickEntrada(p){const r=await api('registrarMovimiento',{planta:currentPlant,patente:p,tipo:'ENTRADA'});if(r.ok){toast(`ENTRADA — ${p}`,'ok');fetchDatos();}else toast('Error: '+r.error,'err');}
+async function quickSalida(p){const r=await api('registrarMovimiento',{planta:currentPlant,patente:p,tipo:'SALIDA'});if(r.ok){toast(`SALIDA — ${p}`,'ok');fetchDatos();}else toast('Error: '+r.error,'err');}
+
+function exportCSV(){
+  const rows=[['Fecha','Proveedor','Patente','Material','Empresa','Beeper','Personas','Entrada','Salida','T.Planta','Estado','Foto Chofer','Foto Acomp1','Foto Acomp2']];
+  cache.registros.forEach(r=>{
+    const en=getEntradaMov(r),sa=getSalidaMov(r);
+    const eTs=en?parseFecha(en.fecha):null,sTs=sa?parseFecha(sa.fecha):null;
+    rows.push([r.fecha,r.proveedor,r.patente,r.material,r.empresa||'',r.beeper||'',r.personas,en?formatHora(en.fecha):'',sa?formatHora(sa.fecha):'',eTs&&sTs?formatElapsed(sTs-eTs):'',getEstado(r),r.foto_chofer||'',r.foto_acomp1||'',r.foto_acomp2||'']);
+  });
+  const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download=`metalum_${currentPlant}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+function openModal(id){
+  document.getElementById(id).classList.add('open');
+  if(id==='regModal'){buildFotoBox(0);buildFotoBox(1);buildFotoBox(2);}
+}
+function closeModal(id){
+  document.getElementById(id).classList.remove('open');
+  Object.keys(streams).forEach(i=>{if(streams[i]){streams[i].getTracks().forEach(t=>t.stop());streams[i]=null;}});
+}
+function openMovModal(pat='',tipo='ENTRADA'){document.getElementById('m_pat').value=pat;document.getElementById('m_tipo').value=tipo;openModal('movModal');}
+function showView(name){document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));document.getElementById('view-'+name).classList.add('active');document.getElementById('nav-'+name).classList.add('active');}
+function clearFilters(){document.getElementById('f-fecha').value='';document.getElementById('f-text').value='';renderHistorial();}
+function toast(msg,type=''){const t=document.createElement('div');t.className='toast '+type;t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3500);}
+
+setInterval(()=>{
+  document.getElementById('clock').textContent=new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  if(currentPlant)renderMonitor();
+},1000);
+
+initMateriales();
+</script>
+</body>
+</html>
