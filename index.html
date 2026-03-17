@@ -182,6 +182,35 @@ tr.rg{background:rgba(45,122,79,.1);}tr.ry{background:rgba(168,120,32,.13);}tr.r
   </div>
 </div>
 
+<!-- PIN JEFE -->
+<div class="overlay" id="pinJefeModal">
+  <div class="modal pin-modal">
+    <div style="font-size:26px;margin-bottom:8px">👔</div>
+    <h2>Vista Jefe de Operaciones</h2>
+    <div class="pin-sub">Ingresa el PIN de acceso</div>
+    <div class="pin-display" id="pinJefeDisplay">________</div>
+    <div class="pin-error" id="pinJefeError"></div>
+    <div class="pin-grid">
+      <button class="pin-btn" onclick="pinJefeKey('1')">1</button>
+      <button class="pin-btn" onclick="pinJefeKey('2')">2</button>
+      <button class="pin-btn" onclick="pinJefeKey('3')">3</button>
+      <button class="pin-btn" onclick="pinJefeKey('4')">4</button>
+      <button class="pin-btn" onclick="pinJefeKey('5')">5</button>
+      <button class="pin-btn" onclick="pinJefeKey('6')">6</button>
+      <button class="pin-btn" onclick="pinJefeKey('7')">7</button>
+      <button class="pin-btn" onclick="pinJefeKey('8')">8</button>
+      <button class="pin-btn" onclick="pinJefeKey('9')">9</button>
+      <button class="pin-btn" onclick="pinJefeKey('back')" style="font-size:14px">⌫</button>
+      <button class="pin-btn" onclick="pinJefeKey('0')">0</button>
+      <button class="pin-btn btn-g" onclick="pinJefeKey('cancel')" style="font-size:11px">✕</button>
+    </div>
+    <div style="margin-top:8px">
+      <input class="fi" id="pinJefeInput" type="password" placeholder="O escribe el PIN aquí" 
+        oninput="pinJefeTexto(this.value)" style="text-align:center;font-size:16px;letter-spacing:4px"/>
+    </div>
+  </div>
+</div>
+
 <!-- PIN -->
 <div class="overlay" id="pinModal">
   <div class="modal pin-modal">
@@ -353,24 +382,22 @@ tr.rg{background:rgba(45,122,79,.1);}tr.ry{background:rgba(168,120,32,.13);}tr.r
 
 <nav>
   <button class="nb active" onclick="showView('monitor')" id="nav-monitor">📡 Monitor <span class="nc" id="cnt">0</span></button>
-  <button class="nb" onclick="showView('registro')" id="nav-registro">📋 Registro</button>
-  <button class="nb" onclick="showView('historial')" id="nav-historial">📂 Historial</button>
+  <button class="nb" onclick="showView('registro')" id="nav-registro" style="display:none">📋 Registro</button>
+  <button class="nb" onclick="showView('historial')" id="nav-historial" style="display:none">📂 Historial</button>
+  <button class="nb" onclick="showView('dashboard')" id="nav-dashboard" style="display:none">📊 Dashboard</button>
 </nav>
 
 <main>
   <!-- MONITOR -->
   <div class="view active" id="view-monitor">
-    <div class="sg">
+    <div class="sg" style="grid-template-columns:repeat(3,1fr)">
       <div class="sc accent-border"><div class="sl">En espera</div><div class="sv" id="s-esp">—</div><div class="ss">camiones aguardando</div></div>
       <div class="sc accent-border"><div class="sl">En planta</div><div class="sv" id="s-pla">—</div><div class="ss">descargando</div></div>
       <div class="sc"><div class="sl">Hoy total</div><div class="sv" id="s-hoy">—</div><div class="ss">ingresos del día</div></div>
-      <div class="sc"><div class="sl">Prom. espera</div><div class="sv" id="s-prom-esp" style="font-size:20px">—</div><div class="ss">tiempo promedio hoy</div></div>
-      <div class="sc"><div class="sl">Prom. en planta</div><div class="sv" id="s-prom-pla" style="font-size:20px">—</div><div class="ss">tiempo promedio hoy</div></div>
     </div>
-    <div style="display:flex;gap:8px;margin-bottom:16px">
-      <button class="btn btn-p" onclick="openModal('regModal')">+ Registro</button>
-      <button class="btn btn-g" onclick="openMovModal()">⇄ Movimiento</button>
-      <button class="btn btn-g btn-sm" onclick="cerrarHuerfanos()" title="Cerrar registros de días anteriores aún abiertos">🔧 Huérfanos</button>
+    <div style="display:flex;gap:8px;margin-bottom:16px" id="monitor-actions">
+      <button class="btn btn-p" onclick="openModal('regModal')" id="btn-registro">+ Registro</button>
+      <button class="btn btn-g" onclick="openMovModal()" id="btn-movimiento">⇄ Movimiento</button>
       <button class="btn btn-g btn-sm" onclick="fetchDatos()" style="margin-left:auto">↻ Actualizar</button>
     </div>
     <div class="dp">
@@ -415,11 +442,46 @@ tr.rg{background:rgba(45,122,79,.1);}tr.ry{background:rgba(168,120,32,.13);}tr.r
       <tbody id="tb-hist"><tr><td colspan="11" class="empty">Cargando...</td></tr></tbody></table>
     </div>
   </div>
+  <!-- DASHBOARD JEFE -->
+  <div class="view" id="view-dashboard">
+    <div class="sh">
+      <div class="st">Dashboard <span>Operaciones</span></div>
+      <div style="font-size:11px;color:var(--text2)" id="dash-fecha"></div>
+    </div>
+    <div class="sg" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
+      <div class="sc accent-border"><div class="sl">Total camiones hoy</div><div class="sv" id="d-total">—</div><div class="ss">ingresos del día</div></div>
+      <div class="sc accent-border"><div class="sl">Prom. espera</div><div class="sv" id="d-esp" style="font-size:20px">—</div><div class="ss">tiempo promedio hoy</div></div>
+      <div class="sc accent-border"><div class="sl">Prom. en planta</div><div class="sv" id="d-pla" style="font-size:20px">—</div><div class="ss">tiempo promedio hoy</div></div>
+    </div>
+    <div class="sg" style="grid-template-columns:repeat(2,1fr);margin-bottom:20px">
+      <div class="sc"><div class="sl">Descargas METALUM</div><div class="sv" id="d-metalum">—</div><div class="ss">camiones hoy</div></div>
+      <div class="sc"><div class="sl">Descargas REINSA</div><div class="sv" id="d-reinsa">—</div><div class="ss">camiones hoy</div></div>
+    </div>
+    <div class="tc" style="margin-bottom:20px">
+      <div class="pt">📦 Por Material — Hoy</div>
+      <div style="padding:14px;display:flex;flex-wrap:wrap;gap:8px" id="d-materiales"></div>
+    </div>
+    <div class="sh" style="margin-top:8px">
+      <div class="st" style="font-size:16px">Historial <span>Completo</span></div>
+      <button class="btn btn-g" onclick="exportCSV()">↓ Exportar CSV</button>
+    </div>
+    <div class="fb">
+      <input class="fi" id="f-fecha" type="date" oninput="renderDashboard()" style="width:auto"/>
+      <input class="fi" id="f-text" placeholder="Buscar patente o proveedor..." oninput="renderDashboard()"/>
+      <button class="btn btn-g btn-sm" onclick="clearFilters()">✕ Limpiar</button>
+    </div>
+    <div class="tc">
+      <table><thead><tr><th>Registro</th><th>Proveedor</th><th>Patente</th><th>Material</th><th>Destino</th><th>Beeper</th><th>Entrada</th><th>Salida</th><th>T. Planta</th><th>Estado</th><th>Carnets</th></tr></thead>
+      <tbody id="tb-dash"><tr><td colspan="11" class="empty">Cargando...</td></tr></tbody></table>
+    </div>
+  </div>
 </main>
 
 <script>
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwWiPLhEZ-GFRdIb3xtsPoPlokUEU4kU6kbX2CBdBoQmL06yA2CBLOf_QfKgjldZdbW/exec';
 const PINS = {'Renca':'2084','La Pintana':'2240'};
+const PIN_JEFE = 'admin2084';
+let vistaJefe = false;
 const MATERIALES = ['UBC','Perfil','Papel','Cartón','PET','Tense','Blando','Radiador','Chatarra','Otro'];
 const MAT_REINSA = ['Papel','Cartón','PET'];
 const MAT_METALUM = ['UBC','Perfil','Tense','Blando','Radiador','Chatarra'];
@@ -454,6 +516,8 @@ function pinKey(k){
 // ─── PLANT ───────────────────────────────────────────────────
 function selectPlant(name){
   updatePendingBadge();
+  // Activar vista según modo
+  setTimeout(()=>{ vistaJefe ? activarVistaJefe() : activarVistaGuardia(); }, 50);
   currentPlant=name;
   document.getElementById('plantBadge').textContent=name.toUpperCase();
   document.body.className=name==='Renca'?'renca':'pintana';
@@ -831,7 +895,10 @@ function empresaBadge(emp){
 }
 
 // ─── RENDER ──────────────────────────────────────────────────
-function renderAll(){renderMonitor();renderRegistro();renderHistorial();}
+function renderAll(){
+  renderMonitor();
+  if(vistaJefe) renderDashboard();
+}
 
 function renderMonitor(){
   const now=Date.now();
@@ -1056,6 +1123,68 @@ function cerrarHuerfanos(){
   toast(`${huerfanos.length} salida(s) registradas`,'ok');
 }
 
+function renderDashboard(){
+  const fF = document.getElementById('f-fecha')?.value;
+  const fT = (document.getElementById('f-text')?.value||'').toLowerCase();
+  const hoy = new Date();
+  document.getElementById('dash-fecha').textContent = hoy.toLocaleDateString('es-CL',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+  let regs = [...cache.registros];
+  const regsHoy = regs.filter(r=>isHoy(r.fecha));
+
+  // Stats del día
+  const totalHoy = regsHoy.length;
+  const tEsp = regsHoy.filter(r=>getEstado(r)==='SALIDA').map(r=>{
+    const ts=parseFecha(r.fecha); const en=getEntradaMov(r);
+    return en?(parseFecha(en.fecha)-ts):null;
+  }).filter(t=>t&&t>0);
+  const promEsp = tEsp.length?tEsp.reduce((a,b)=>a+b,0)/tEsp.length:0;
+
+  const tPla = regsHoy.filter(r=>getEstado(r)==='SALIDA').map(r=>{
+    const en=getEntradaMov(r),sa=getSalidaMov(r);
+    return(en&&sa)?parseFecha(sa.fecha)-parseFecha(en.fecha):null;
+  }).filter(t=>t&&t>0);
+  const promPla = tPla.length?tPla.reduce((a,b)=>a+b,0)/tPla.length:0;
+
+  const metalumHoy = regsHoy.filter(r=>r.empresa&&r.empresa.includes('METALUM')).length;
+  const reinsaHoy  = regsHoy.filter(r=>r.empresa&&r.empresa.includes('REINSA')).length;
+
+  document.getElementById('d-total').textContent   = totalHoy||'—';
+  document.getElementById('d-esp').textContent     = promEsp?formatElapsed(promEsp):'—';
+  document.getElementById('d-pla').textContent     = promPla?formatElapsed(promPla):'—';
+  document.getElementById('d-metalum').textContent = metalumHoy||'0';
+  document.getElementById('d-reinsa').textContent  = reinsaHoy||'0';
+
+  // Por material
+  const matCount = {};
+  regsHoy.forEach(r=>{
+    if(!r.material) return;
+    r.material.split('→').forEach(m=>{
+      const k=m.trim(); if(k) matCount[k]=(matCount[k]||0)+1;
+    });
+  });
+  document.getElementById('d-materiales').innerHTML = Object.entries(matCount).length
+    ? Object.entries(matCount).sort((a,b)=>b[1]-a[1]).map(([m,n])=>
+        `<span class="badge b-y" style="font-size:12px;padding:4px 12px">${m} <b>${n}</b></span>`).join('')
+    : '<span style="color:var(--text3);font-size:12px">Sin datos hoy</span>';
+
+  // Historial con filtros
+  let filtered = [...regs].reverse();
+  if(fF){const[fy,fm,fd]=fF.split('-');filtered=filtered.filter(r=>{const d=parseFecha(r.fecha);return d&&d.getDate()==parseInt(fd)&&(d.getMonth()+1)==parseInt(fm)&&d.getFullYear()==parseInt(fy);});}
+  if(fT) filtered=filtered.filter(r=>r.patente.toLowerCase().includes(fT)||r.proveedor.toLowerCase().includes(fT));
+
+  const bmap={ESPERA:'<span class="badge b-y">En espera</span>',PLANTA:'<span class="badge b-g">En planta</span>',SALIDA:'<span class="badge b-gr">Completado</span>'};
+  const tbody=document.getElementById('tb-dash');
+  tbody.innerHTML=filtered.length?filtered.map(r=>{
+    const en=getEntradaMov(r),sa=getSalidaMov(r);
+    const eTs=en?parseFecha(en.fecha):null,sTs=sa?parseFecha(sa.fecha):null;
+    const carnets=[];
+    if(r.foto_chofer) carnets.push(`<a href="${r.foto_chofer}" target="_blank" style="color:var(--accent);font-size:11px">Chofer</a>`);
+    if(r.foto_acomp1) carnets.push(`<a href="${r.foto_acomp1}" target="_blank" style="color:var(--accent);font-size:11px">Acomp.1</a>`);
+    return`<tr><td style="font-size:11px;color:var(--text2)">${r.fecha}</td><td>${r.proveedor}</td><td style="font-weight:600">${r.patente}</td><td style="color:var(--text2)">${r.material}</td><td>${empresaBadge(r.empresa)}</td><td style="text-align:center">${r.beeper||'—'}</td><td>${en?formatHora(en.fecha):'—'}</td><td>${sa?formatHora(sa.fecha):'—'}</td><td>${eTs&&sTs?formatElapsed(sTs-eTs):eTs?'En curso':'—'}</td><td>${bmap[getEstado(r)]}</td><td>${carnets.join(' ')}</td></tr>`;
+  }).join(''):'<tr><td colspan="11" class="empty">Sin registros</td></tr>';
+}
+
 function exportCSV(){
   const rows=[['Fecha','Proveedor','Patente','Material','Empresa','Beeper','Personas','Entrada','Salida','T.Planta','Estado','Foto Chofer','Foto Acomp1','Foto Acomp2']];
   cache.registros.forEach(r=>{
@@ -1096,21 +1225,59 @@ setInterval(()=>{
 
 initMateriales();
 
-// ─── MODO MONITOR (solo lectura para supervisores) ───────────
+// ─── VISTA JEFE ──────────────────────────────────────────────
 const urlParams = new URLSearchParams(window.location.search);
-const monitorMode = urlParams.get('monitor');
-const monitorPlanta = urlParams.get('planta');
-if(monitorMode && monitorPlanta){
-  // Ocultar nav items excepto monitor
+if(urlParams.get('vista') === 'jefe'){
+  // Mostrar modal PIN jefe antes del modal de planta
+  document.getElementById('plantModal').classList.remove('open');
+  document.getElementById('pinJefeModal').classList.add('open');
+}
+
+let pinJefeActual = '';
+function pinJefeKey(k){
+  if(k==='cancel'){ document.getElementById('pinJefeModal').classList.remove('open'); document.getElementById('plantModal').classList.add('open'); return; }
+  if(k==='back') pinJefeActual=pinJefeActual.slice(0,-1);
+  else if(pinJefeActual.length < 9) pinJefeActual+=k;
+  actualizarDisplayJefe();
+}
+function pinJefeTexto(v){
+  pinJefeActual = v;
+  actualizarDisplayJefe();
+}
+function actualizarDisplayJefe(){
+  document.getElementById('pinJefeDisplay').textContent = '●'.repeat(pinJefeActual.length).padEnd(8,'_');
+  document.getElementById('pinJefeError').textContent = '';
+  if(pinJefeActual === PIN_JEFE){
+    document.getElementById('pinJefeModal').classList.remove('open');
+    document.getElementById('plantModal').classList.add('open');
+    vistaJefe = true;
+  } else if(pinJefeActual.length >= PIN_JEFE.length){
+    document.getElementById('pinJefeError').textContent = 'PIN incorrecto';
+    pinJefeActual = '';
+    document.getElementById('pinJefeInput').value = '';
+    document.getElementById('pinJefeDisplay').textContent = '________';
+  }
+}
+
+function activarVistaJefe(){
+  // Mostrar tabs jefe, ocultar tabs guardia
   document.getElementById('nav-registro').style.display='none';
   document.getElementById('nav-historial').style.display='none';
+  document.getElementById('nav-dashboard').style.display='';
   // Ocultar botones de acción
-  document.querySelectorAll('.btn-p, .btn-green, .btn-red').forEach(b=>{
-    if(!b.closest('.pin-modal')) b.style.display='none';
-  });
-  // Entrar directo sin PIN
-  selectPlant(monitorPlanta==='renca'?'Renca':'La Pintana');
-  document.getElementById('plantModal').classList.remove('open');
+  document.getElementById('btn-registro').style.display='none';
+  document.getElementById('btn-movimiento').style.display='none';
+  // Ir directo al dashboard
+  showView('dashboard');
+}
+
+function activarVistaGuardia(){
+  document.getElementById('nav-registro').style.display='none';
+  document.getElementById('nav-historial').style.display='none';
+  document.getElementById('nav-dashboard').style.display='none';
+  document.getElementById('btn-registro').style.display='';
+  document.getElementById('btn-movimiento').style.display='';
+  showView('monitor');
 }
 </script>
 </body>
