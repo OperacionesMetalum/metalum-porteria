@@ -7,16 +7,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:#0f0f0f;--surface:#171717;--surface2:#1f1f1f;--border:#2a2a2a;
-  --accent:#e8a020;--text:#f0f0f0;--text2:#888;--text3:#444;
-  --green:#2d7a4f;--green-l:#3aaa6a;--yellow-l:#e8a820;
-  --red:#8a2020;--red-l:#e83030;--r:8px;
+  --bg:#f5f5f3;--surface:#ffffff;--surface2:#f0eeeb;--border:#e0ddd8;
+  --accent:#e8a020;--text:#1a1a1a;--text2:#666;--text3:#aaa;
+  --green:#1e6b3f;--green-l:#2a9458;--yellow-l:#c47a10;
+  --red:#8a2020;--red-l:#c0392b;--r:8px;
   --fh:'Syne',sans-serif;--fm:'DM Mono',monospace;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:var(--fm);min-height:100vh;display:flex;flex-direction:column;}
-body.renca{--accent:#e8a020;}
-body.pintana{--accent:#2080e8;}
+body.renca{--accent:#c47a10;}
+body.pintana{--accent:#1a6bbf;}
 
 header{background:var(--surface);border-bottom:2px solid var(--accent);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:52px;position:sticky;top:0;z-index:100;transition:border-color .3s;}
 .logo{font-family:var(--fh);font-weight:800;font-size:16px;display:flex;align-items:center;gap:8px;}
@@ -108,7 +108,7 @@ video{width:100%;border-radius:4px;max-height:160px;object-fit:cover;background:
 .pin-display{font-family:var(--fh);font-size:36px;letter-spacing:12px;margin:12px 0;min-height:48px;color:var(--accent);}
 .pin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
 .pin-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--fh);font-size:20px;font-weight:700;padding:16px;border-radius:var(--r);cursor:pointer;transition:all .1s;}
-.pin-btn:hover{background:var(--border);}.pin-btn:active{transform:scale(.95);}
+.pin-btn:hover{background:var(--border);filter:brightness(.95);}.pin-btn:active{transform:scale(.95);}
 .pin-error{color:var(--red-l);font-size:11px;height:16px;margin-bottom:6px;}
 
 /* PLANT SELECT */
@@ -137,15 +137,15 @@ table{width:100%;border-collapse:collapse;}
 th{background:var(--surface2);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);padding:10px 14px;text-align:left;font-weight:500;border-bottom:1px solid var(--border);}
 td{padding:10px 14px;font-size:12px;border-bottom:1px solid var(--border);vertical-align:middle;}
 tr:last-child td{border-bottom:none;}
-tr.rg{background:rgba(45,122,79,.1);}tr.ry{background:rgba(168,120,32,.13);}tr.rr{background:rgba(138,32,32,.15);}
+tr.rg{background:rgba(30,107,63,.07);}tr.ry{background:rgba(196,122,16,.1);}tr.rr{background:rgba(192,57,43,.1);}
 .empty{text-align:center;padding:40px;color:var(--text3);font-size:12px;}
 
 .badge{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:500;}
-.b-g{background:rgba(58,170,106,.12);color:var(--green-l);border:1px solid rgba(58,170,106,.25);}
-.b-y{background:rgba(232,168,32,.12);color:var(--yellow-l);border:1px solid rgba(232,168,32,.25);}
-.b-r{background:rgba(232,48,48,.12);color:var(--red-l);border:1px solid rgba(232,48,48,.25);}
-.b-gr{background:rgba(136,136,136,.1);color:var(--text2);border:1px solid rgba(136,136,136,.2);}
-.b-blue{background:rgba(32,128,232,.12);color:#60aaff;border:1px solid rgba(32,128,232,.25);}
+.b-g{background:rgba(30,107,63,.1);color:#1e6b3f;border:1px solid rgba(30,107,63,.25);}
+.b-y{background:rgba(196,122,16,.12);color:#9a5c00;border:1px solid rgba(196,122,16,.3);}
+.b-r{background:rgba(192,57,43,.1);color:#c0392b;border:1px solid rgba(192,57,43,.25);}
+.b-gr{background:rgba(100,100,100,.08);color:var(--text2);border:1px solid rgba(100,100,100,.2);}
+.b-blue{background:rgba(26,107,191,.1);color:#1a5fa0;border:1px solid rgba(26,107,191,.25);}
 
 .sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
 .st{font-family:var(--fh);font-size:20px;font-weight:700;}.st span{color:var(--accent);}
@@ -482,9 +482,9 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwWiPLhEZ-GFRdIb3xts
 const PINS = {'Renca':'2084','La Pintana':'2240'};
 const PIN_JEFE = 'admin2084';
 let vistaJefe = false;
-const MATERIALES = ['UBC','Perfil','Papel','Cartón','PET','Tense','Blando','Radiador','Chatarra','Otro'];
-const MAT_REINSA = ['Papel','Cartón','PET'];
-const MAT_METALUM = ['UBC','Perfil','Tense','Blando','Radiador','Chatarra'];
+const MATERIALES = ['UBC','Perfil','Papel','Cartón','PET','Tissue','Duro','Blando','Radiador','Chatarra','Otro'];
+const MAT_REINSA = ['Papel','Cartón','PET','Tissue'];
+const MAT_METALUM = ['UBC','Perfil','Duro','Blando','Radiador','Chatarra'];
 
 let currentPlant='', cache={registros:[],movimientos:[]}, refreshInterval=null;
 let materialesSeleccionados=[];
