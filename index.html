@@ -922,12 +922,14 @@ function renderMonitor(){
   const tbE=document.getElementById('tb-esp');
   tbE.innerHTML=enEspera.length?enEspera.sort((a,b)=>parseFecha(a.fecha)-parseFecha(b.fecha)).map(r=>{
     const el=now-parseFecha(r.fecha);
-    return`<tr class="${waitClass(el)}"><td>${formatHora(r.fecha)}</td><td>${r.proveedor}</td><td style="font-weight:600">${r.patente}</td><td style="text-align:center"><b>${r.beeper||'—'}</b></td><td>${empresaBadge(r.empresa)}</td><td><span class="badge ${waitBadge(el)}">${formatElapsed(el)}</span></td><td style="display:flex;gap:4px"><button class="btn btn-green btn-sm" onclick="quickEntrada('${r.patente}',this)">Hacer pasar</button><button class="btn btn-g btn-sm" onclick="abrirEdicion('${r.patente}','${r.fecha}')" title="Corregir patente">✏️</button></td></tr>`;
+    return`<tr class="${waitClass(el)}"><td>${formatHora(r.fecha)}</td><td>${r.proveedor}</td><td style="font-weight:600">${r.patente}</td><td style="text-align:center"><b>${r.beeper||'—'}</b></td><td>${empresaBadge(r.empresa)}</td><td><span class="badge ${waitBadge(el)}">${formatElapsed(el)}</span></td><td style="display:flex;gap:4px">${vistaJefe?'':
+`<button class="btn btn-green btn-sm" onclick="quickEntrada('${r.patente}',this)">Hacer pasar</button><button class="btn btn-g btn-sm" onclick="abrirEdicion('${r.patente}','${r.fecha}')" title="Corregir patente">✏️</button>`}</td></tr>`;
   }).join(''):'<tr><td colspan="7" class="empty">Sin camiones en espera</td></tr>';
   const tbP=document.getElementById('tb-pla');
   tbP.innerHTML=enPlanta.length?enPlanta.map(r=>{
     const en=getEntradaMov(r);
-    return`<tr><td>${en?formatHora(en.fecha):'—'}</td><td>${r.proveedor}</td><td style="font-weight:600">${r.patente}</td><td style="color:var(--text2)">${r.material}</td><td>${empresaBadge(r.empresa)}</td><td style="display:flex;gap:4px"><button class="btn btn-red btn-sm" onclick="quickSalida('${r.patente}',this)">Salida</button><button class="btn btn-g btn-sm" onclick="abrirEdicion('${r.patente}','${r.fecha}')" title="Corregir patente">✏️</button></td></tr>`;
+    return`<tr><td>${en?formatHora(en.fecha):'—'}</td><td>${r.proveedor}</td><td style="font-weight:600">${r.patente}</td><td style="color:var(--text2)">${r.material}</td><td>${empresaBadge(r.empresa)}</td><td style="display:flex;gap:4px">${vistaJefe?'':
+`<button class="btn btn-red btn-sm" onclick="quickSalida('${r.patente}',this)">Salida</button><button class="btn btn-g btn-sm" onclick="abrirEdicion('${r.patente}','${r.fecha}')" title="Corregir patente">✏️</button>`}</td></tr>`;
   }).join(''):'<tr><td colspan="6" class="empty">Sin camiones en planta</td></tr>';
 }
 
