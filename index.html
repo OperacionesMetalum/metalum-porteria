@@ -831,12 +831,15 @@ function setOnline(online){
   setSyncOk(online);
 }
 
+let vistaActivada = false;
 async function fetchDatos(){
   try{
     const r = await api('getDatos',{planta:currentPlant});
-    if(r.ok){ cache=r; setOnline(true); renderAll(); }
+    if(r.ok){ cache=r; setOnline(true); }
     else setOnline(false);
   }catch(e){ setOnline(false); }
+  if(!vistaActivada){ vistaActivada=true; vistaJefe ? activarVistaJefe() : activarVistaGuardia(); }
+  renderAll();
 }
 
 function setSyncOk(ok){ const d=document.getElementById('syncDot'); if(d) d.className='sync-dot '+(ok?'ok':'err'); }
