@@ -516,8 +516,6 @@ function pinKey(k){
 // ─── PLANT ───────────────────────────────────────────────────
 function selectPlant(name){
   updatePendingBadge();
-  // Activar vista según modo
-  setTimeout(()=>{ vistaJefe ? activarVistaJefe() : activarVistaGuardia(); }, 50);
   currentPlant=name;
   document.getElementById('plantBadge').textContent=name.toUpperCase();
   document.body.className=name==='Renca'?'renca':'pintana';
@@ -1249,14 +1247,24 @@ function actualizarDisplayJefe(){
   document.getElementById('pinJefeError').textContent = '';
   if(pinJefeActual === PIN_JEFE){
     document.getElementById('pinJefeModal').classList.remove('open');
-    document.getElementById('plantModal').classList.add('open');
     vistaJefe = true;
+    // Ir directo a selección de planta SIN pedir PIN de planta
+    mostrarSelectorPlantaJefe();
   } else if(pinJefeActual.length >= PIN_JEFE.length){
     document.getElementById('pinJefeError').textContent = 'PIN incorrecto';
     pinJefeActual = '';
     document.getElementById('pinJefeInput').value = '';
     document.getElementById('pinJefeDisplay').textContent = '________';
   }
+}
+
+function mostrarSelectorPlantaJefe(){
+  // Modal de planta sin PIN — solo selección directa
+  const modal = document.getElementById('plantModal');
+  // Reemplazar botones para que no pidan PIN
+  modal.querySelector('.renca-opt').onclick = ()=>{ selectPlant('Renca'); modal.classList.remove('open'); startRefresh(); };
+  modal.querySelector('.pinta-opt').onclick = ()=>{ selectPlant('La Pintana'); modal.classList.remove('open'); startRefresh(); };
+  modal.classList.add('open');
 }
 
 function activarVistaJefe(){
