@@ -907,14 +907,15 @@ function renderMonitor(){
   const promEsp=tEsp.length?tEsp.reduce((a,b)=>a+b,0)/tEsp.length:0;
   const tPla=regsHoy.filter(r=>getEstado(r)==='SALIDA').map(r=>{const e=getEntradaMov(r),s=getSalidaMov(r);return(e&&s)?parseFecha(s.fecha)-parseFecha(e.fecha):0;}).filter(t=>t>0);
   const promPla=tPla.length?tPla.reduce((a,b)=>a+b,0)/tPla.length:0;
-  document.getElementById('s-esp').textContent=enEspera.length;
-  document.getElementById('s-pla').textContent=enPlanta.length;
-  document.getElementById('s-hoy').textContent=regsHoy.length;
-  document.getElementById('s-prom-esp').textContent=promEsp?formatElapsed(promEsp):'—';
-  document.getElementById('s-prom-pla').textContent=promPla?formatElapsed(promPla):'—';
-  document.getElementById('b-esp').textContent=enEspera.length;
-  document.getElementById('b-pla').textContent=enPlanta.length;
-  document.getElementById('cnt').textContent=enEspera.length;
+  const setEl = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+  setEl('s-esp', enEspera.length);
+  setEl('s-pla', enPlanta.length);
+  setEl('s-hoy', regsHoy.length);
+  setEl('s-prom-esp', promEsp?formatElapsed(promEsp):'—');
+  setEl('s-prom-pla', promPla?formatElapsed(promPla):'—');
+  setEl('b-esp', enEspera.length);
+  setEl('b-pla', enPlanta.length);
+  setEl('cnt', enEspera.length);
   const tbE=document.getElementById('tb-esp');
   tbE.innerHTML=enEspera.length?enEspera.sort((a,b)=>parseFecha(a.fecha)-parseFecha(b.fecha)).map(r=>{
     const el=now-parseFecha(r.fecha);
