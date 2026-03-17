@@ -1260,24 +1260,35 @@ function actualizarDisplayJefe(){
 }
 
 function mostrarSelectorPlantaJefe(){
-  // Modal de planta sin PIN — solo selección directa
   const modal = document.getElementById('plantModal');
-  // Reemplazar botones para que no pidan PIN
-  modal.querySelector('.renca-opt').onclick = ()=>{ selectPlant('Renca'); modal.classList.remove('open'); startRefresh(); };
-  modal.querySelector('.pinta-opt').onclick = ()=>{ selectPlant('La Pintana'); modal.classList.remove('open'); startRefresh(); };
+  // Bypass PIN — ir directo a selectPlant
+  modal.querySelector('.renca-opt').onclick = ()=>{
+    modal.classList.remove('open');
+    currentPlant='Renca';
+    document.getElementById('plantBadge').textContent='RENCA';
+    document.body.className='renca';
+    startRefresh();
+  };
+  modal.querySelector('.pinta-opt').onclick = ()=>{
+    modal.classList.remove('open');
+    currentPlant='La Pintana';
+    document.getElementById('plantBadge').textContent='LA PINTANA';
+    document.body.className='pintana';
+    startRefresh();
+  };
   modal.classList.add('open');
 }
 
 function activarVistaJefe(){
-  // Mostrar tabs jefe, ocultar tabs guardia
-  document.getElementById('nav-registro').style.display='none';
-  document.getElementById('nav-historial').style.display='none';
-  document.getElementById('nav-dashboard').style.display='';
-  // Ocultar botones de acción
-  document.getElementById('btn-registro').style.display='none';
-  document.getElementById('btn-movimiento').style.display='none';
-  // Ir directo al dashboard
+  const hide = id => { const el=document.getElementById(id); if(el) el.style.display='none'; };
+  const show = id => { const el=document.getElementById(id); if(el) el.style.display=''; };
+  hide('nav-registro');
+  hide('nav-historial');
+  hide('btn-registro');
+  hide('btn-movimiento');
+  show('nav-dashboard');
   showView('dashboard');
+  renderDashboard();
 }
 
 function activarVistaGuardia(){
